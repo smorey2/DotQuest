@@ -1,0 +1,37 @@
+# System files
+Thumbs.db
+Thumbs.db.meta
+*.DS_Store
+*.directory
+.vs
+.vscode
+.workspace
+.gradle
+*.zip
+*.tar.gz
+
+# Android Build files
+*.apk
+*.obb
+
+# Visual Studio files
+*.cachefile
+*.pidb
+*.suo
+*.user
+*.userprefs
+*.v11
+*.v12
+*.VC.db
+#*.db
+#*.opendb
+
+# Folder to exclude
+ARM64/
+x64/
+x86/
+[Bb]in/
+[Dd]ebug*/
+[Rr]elease*/
+ipch/
+obj/
