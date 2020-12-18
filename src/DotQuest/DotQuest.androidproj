@@ -62,10 +62,17 @@
   </ItemGroup>
   <ItemGroup>
     <Content Include="app\src\main\assets\main.cfg" />
-    <Content Include="app\src\main\jni\main.cpp" />
-    <Content Include="app\src\main\libs\arm64\libnethost.so" />
+    <Content Include="app\src\main\assets\x86_64\ld-musl-x86_64.so.1" />
+    <Content Include="app\src\main\assets\x86_64\libgcc_s.so.1" />
+    <Content Include="app\src\main\assets\x86_64\libstdc++.so.6" />
+    <Content Include="app\src\bak\x86_64\ld-linux-x86-64.so.2" />
+    <Content Include="app\src\bak\x86_64\libc.so.6" />
+    <Content Include="app\src\bak\x86_64\libgcc_s.so.1" />
+    <Content Include="app\src\bak\x86_64\libm.so.6" />
+    <Content Include="app\src\bak\x86_64\libstdc++.so.6" />
+    <Content Include="app\src\main\libs\arm64-v8a\libnethost.so" />
     <Content Include="app\src\main\libs\x86_64\libnethost.so" />
-    <Content Include="app\src\main\libs\x86_64_linux\libnethost.so" />
+    <Content Include="app\src\bak\x86_64_raw\libnethost.so" />
     <Content Include="app\src\main\res\values\strings.xml" />
   </ItemGroup>
   <ItemGroup>

@@ -30,14 +30,27 @@ import static android.system.Os.setenv;
 
 @SuppressLint("SdCardPath")
 public class MainActivity extends Activity implements SurfaceHolder.Callback {
-	// Load the DotQuestJNI library right away to make sure JNI_OnLoad() gets called as the very first thing.
-	static {
-		Log.v("GAMETAG", "BEFORE");
-		System.loadLibrary("DotQuestJNI");
-		Log.v("GAMETAG", "AFTER");
-	}
+	private static final String TAG = "TAG5";
+	private static boolean LOADED = false;
 
-	private static final String TAG = "GAMETAG";
+	public MainActivity() {
+		if (LOADED)
+			return;
+		PrintFolder("/data/data/com.dotquest.quest", true);
+		Log.v(TAG, "----------------------------------------------------------------");
+		String arch = System.getProperty("os.arch");
+		load_asset("/data/data/com.dotquest.quest/app_lib", arch + "/ld-musl-x86_64.so.1", false);
+		load_asset("/data/data/com.dotquest.quest/app_lib", arch + "/libgcc_s.so.1", false);
+		load_asset("/data/data/com.dotquest.quest/app_lib", arch + "/libstdc++.so.6", false);
+		Log.v(TAG, "LOADED ALL");
+		//System.loadLibrary("DotQuestJNI");
+		LOADED = true;
+	}
+	//load_asset("/data/data/com.dotquest.quest/app_lib", arch + "/ld-linux-x86-64.so.2", false);
+	//load_asset("/data/data/com.dotquest.quest/app_lib", arch + "/libc.so.6", false);
+	//load_asset("/data/data/com.dotquest.quest/app_lib", arch + "/libm.so.6", false);
+	//load_asset("/data/data/com.dotquest.quest/app_lib", arch + "/libstdc++.so.6", false);
+
 	private static final int READ_EXTERNAL_STORAGE_PERMISSION_ID = 1;
 	private static final int WRITE_EXTERNAL_STORAGE_PERMISSION_ID = 2;
 	// Main components
@@ -143,7 +156,7 @@ public class MainActivity extends Activity implements SurfaceHolder.Callback {
 		new File("/sdcard/GameEstate/Main").mkdirs();
 
 		// copy assets
-		//copy_asset("/sdcard/GameEstate/Main", "main.cfg", false);
+		copy_asset("/sdcard/GameEstate/Main", "main.cfg", false);
 
 		// read these from a file and pass through
 		commandLineParams = new String("none");
@@ -175,6 +188,14 @@ public class MainActivity extends Activity implements SurfaceHolder.Callback {
 		Log.v(TAG, "HANDLE: " + _nativeHandle);
 	}
 
+	public void load_asset(String path, String name, boolean force) {
+		Log.v("PATH", path);
+		Log.v("NAME", name);
+		copy_asset(path, name, force);
+		Log.v(TAG, "LOADED: " + name);
+		//System.load(path + name);
+	}
+
 	public void copy_asset(String path, String name, boolean force) {
 		File f = new File(path + "/" + name);
 		if (!f.exists() || force) {
@@ -191,9 +212,7 @@ public class MainActivity extends Activity implements SurfaceHolder.Callback {
 		try {
 			InputStream in = assets.open(name_in);
 			OutputStream out = new FileOutputStream(name_out);
-
 			copy_stream(in, out);
-
 			out.close();
 			in.close();
 		} catch (Exception e) {
@@ -209,6 +228,21 @@ public class MainActivity extends Activity implements SurfaceHolder.Callback {
 				break;
 			out.write(buf, 0, count);
 		}
+	}
+
+	private static void PrintFolder(String path, Boolean recurse) {
+		File file = new File(path);
+		File[] files = file.listFiles();
+		if (files == null)
+			return;
+		String numFiles = String.valueOf(files.length);
+		if (files != null)
+			for (int i = 0; i < files.length; ++i) {
+				String subPath = files[i].getAbsolutePath();
+				Log.v(numFiles, subPath);
+				if (recurse)
+					PrintFolder(subPath, recurse);
+			}
 	}
 
 	@Override
