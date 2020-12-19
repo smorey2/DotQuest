@@ -30,30 +30,12 @@ import static android.system.Os.setenv;
 
 @SuppressLint("SdCardPath")
 public class MainActivity extends Activity implements SurfaceHolder.Callback {
-	private static final String TAG = "TAG5";
-	private static boolean LOADED = false;
-
-	public MainActivity() {
-		if (LOADED)
-			return;
-		PrintFolder("/data/data/com.dotquest.quest", true);
-		Log.v(TAG, "----------------------------------------------------------------");
-		String arch = System.getProperty("os.arch");
-		load_asset("/data/data/com.dotquest.quest/app_lib", arch + "/ld-musl-x86_64.so.1", false);
-		load_asset("/data/data/com.dotquest.quest/app_lib", arch + "/libgcc_s.so.1", false);
-		load_asset("/data/data/com.dotquest.quest/app_lib", arch + "/libstdc++.so.6", false);
-		Log.v(TAG, "LOADED ALL");
-		//System.loadLibrary("DotQuestJNI");
-		LOADED = true;
-	}
-	//load_asset("/data/data/com.dotquest.quest/app_lib", arch + "/ld-linux-x86-64.so.2", false);
-	//load_asset("/data/data/com.dotquest.quest/app_lib", arch + "/libc.so.6", false);
-	//load_asset("/data/data/com.dotquest.quest/app_lib", arch + "/libm.so.6", false);
-	//load_asset("/data/data/com.dotquest.quest/app_lib", arch + "/libstdc++.so.6", false);
+	protected static final String TAG = "TAG";
 
 	private static final int READ_EXTERNAL_STORAGE_PERMISSION_ID = 1;
 	private static final int WRITE_EXTERNAL_STORAGE_PERMISSION_ID = 2;
 	// Main components
+	protected static boolean LOADED = false;
 	protected static MainActivity _singleton;
 
 	// Audio
@@ -78,8 +60,42 @@ public class MainActivity extends Activity implements SurfaceHolder.Callback {
 		System.exit(0);
 	}
 
+	public MainActivity() {
+	}
+
+	private void load() {
+		if (LOADED)
+			return;
+		LOADED = true;
+		PrintFolder("/data/data/com.dotquest.quest", true);
+		Log.v(TAG, "----------------------------------------------------------------");
+		String arch = System.getProperty("os.arch");
+		if (arch.equals("arm64-v8a")) {
+			load_asset("/data/data/com.dotquest.quest/app_lib", "arm64-v8a/ld-musl-x86_64.so.1", false);
+		} else if (arch.equals("x86_64")) {
+			// lib
+			load_asset("/data/data/com.dotquest.quest/app_lib", "x86_64/ld-musl-x86_64.so.1", false);
+			load_asset("/data/data/com.dotquest.quest/app_lib", "x86_64/libcrypto.so.1.1", false);
+			load_asset("/data/data/com.dotquest.quest/app_lib", "x86_64/libpam.so.0", false); //: 0.84.2
+			load_asset("/data/data/com.dotquest.quest/app_lib", "x86_64/libpam_misc.so.0", false); //: 0.82.1
+			load_asset("/data/data/com.dotquest.quest/app_lib", "x86_64/libpamc.so.0", false); //: 0.82.1
+			load_asset("/data/data/com.dotquest.quest/app_lib", "x86_64/libssl.so.1.1", false);
+			load_asset("/data/data/com.dotquest.quest/app_lib", "x86_64/libz.so.1", false); //: 1.2.11
+			// usr/lib
+			load_asset("/data/data/com.dotquest.quest/app_lib", "x86_64/libgcc_s.so.1", false);
+			load_asset("/data/data/com.dotquest.quest/app_lib", "x86_64/libstdc++.so.6", false); //: 6.0.28
+		} else {
+			Log.v(TAG, "UNKNOWN: [" + arch +"]");
+			System.exit(0);
+		}
+		Log.v(TAG, "LOADED");
+		System.loadLibrary("DotQuestJNI");
+		Log.v(TAG, "LOADED!!");
+	}
+
 	@Override
 	protected void onCreate(Bundle savedInstanceState) {
+		load();
 		Log.v(TAG, "----------------------------------------------------------------");
 		Log.v(TAG, "MainActivity::onCreate()");
 		super.onCreate(savedInstanceState);
@@ -107,47 +123,43 @@ public class MainActivity extends Activity implements SurfaceHolder.Callback {
 
 	/** Initializes the Activity only if the permission has been granted. */
 	private void checkPermissionsAndInitialize() {
+		// permission: WRITE_EXTERNAL_STORAGE
 		if (ContextCompat.checkSelfPermission(this,
 				Manifest.permission.WRITE_EXTERNAL_STORAGE) != PackageManager.PERMISSION_GRANTED) {
 			ActivityCompat.requestPermissions(MainActivity.this,
 					new String[] { Manifest.permission.WRITE_EXTERNAL_STORAGE }, WRITE_EXTERNAL_STORAGE_PERMISSION_ID);
-		} else {
+		} else
 			permissionCount++;
-		}
-
+		// permission: READ_EXTERNAL_STORAGE
 		if (ContextCompat.checkSelfPermission(this,
 				Manifest.permission.READ_EXTERNAL_STORAGE) != PackageManager.PERMISSION_GRANTED) {
 			ActivityCompat.requestPermissions(MainActivity.this,
 					new String[] { Manifest.permission.READ_EXTERNAL_STORAGE }, READ_EXTERNAL_STORAGE_PERMISSION_ID);
-		} else {
+		} else
 			permissionCount++;
-		}
-
-		if (permissionCount == 2) {
-			// Permissions have already been granted.
+		// permission: READY
+		if (permissionCount == 2)
 			create();
-		}
 	}
 
 	/** Handles the user accepting the permission. */
 	@Override
 	public void onRequestPermissionsResult(int requestCode, String[] permissions, int[] results) {
+		// permission: WRITE_EXTERNAL_STORAGE
 		if (requestCode == READ_EXTERNAL_STORAGE_PERMISSION_ID) {
-			if (results.length > 0 && results[0] == PackageManager.PERMISSION_GRANTED) {
+			if (results.length > 0 && results[0] == PackageManager.PERMISSION_GRANTED)
 				permissionCount++;
-			} else {
+			else
 				System.exit(0);
-			}
 		}
-
+		// permission: READ_EXTERNAL_STORAGE
 		if (requestCode == WRITE_EXTERNAL_STORAGE_PERMISSION_ID) {
-			if (results.length > 0 && results[0] == PackageManager.PERMISSION_GRANTED) {
+			if (results.length > 0 && results[0] == PackageManager.PERMISSION_GRANTED)
 				permissionCount++;
-			} else {
+			else
 				System.exit(0);
-			}
 		}
-
+		// permission: READY
 		checkPermissionsAndInitialize();
 	}
 
@@ -189,11 +201,9 @@ public class MainActivity extends Activity implements SurfaceHolder.Callback {
 	}
 
 	public void load_asset(String path, String name, boolean force) {
-		Log.v("PATH", path);
-		Log.v("NAME", name);
 		copy_asset(path, name, force);
 		Log.v(TAG, "LOADED: " + name);
-		//System.load(path + name);
+		System.load(path + "/" + name);
 	}
 
 	public void copy_asset(String path, String name, boolean force) {
