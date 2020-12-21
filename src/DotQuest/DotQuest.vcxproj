@@ -25,6 +25,7 @@
     <MinimumVisualStudioVersion>14.0</MinimumVisualStudioVersion>
     <ApplicationType>Android</ApplicationType>
     <ApplicationTypeRevision>3.0</ApplicationTypeRevision>
+    <ProjectName>DotQuest</ProjectName>
   </PropertyGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.Default.props" />
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|ARM64'" Label="Configuration">
@@ -44,6 +45,7 @@
     <UseDebugLibraries>true</UseDebugLibraries>
     <PlatformToolset>Clang_5_0</PlatformToolset>
     <AndroidAPILevel>android-26</AndroidAPILevel>
+    <UseOfStl>c++_shared</UseOfStl>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|x64'" Label="Configuration">
     <ConfigurationType>DynamicLibrary</ConfigurationType>
@@ -57,6 +59,7 @@
   <ImportGroup Label="PropertySheets" />
   <PropertyGroup Label="UserMacros" />
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">
+    <UseMultiToolTask>true</UseMultiToolTask>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|x64'">
   </PropertyGroup>
@@ -68,55 +71,62 @@
     <ClCompile>
       <PrecompiledHeader>Use</PrecompiledHeader>
       <PrecompiledHeaderFile>pch.h</PrecompiledHeaderFile>
-      <AdditionalIncludeDirectories>$(SolutionDir)..\lib\dotnet\linux-musl-x64\native;$(SolutionDir)..\lib\quest;$(MSBuildProjectDirectory)\inc;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <AdditionalIncludeDirectories>$(SolutionDir)..\lib\dotnet\linux-musl-x64\native;$(SolutionDir)..\lib\quest;$(SolutionDir)..\lib\gl4es\include;$(MSBuildProjectDirectory)\include;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
     </ClCompile>
     <Link>
-      <LibraryDependencies>nethost;%(LibraryDependencies)</LibraryDependencies>
-      <AdditionalLibraryDirectories>$(SolutionDir)..\lib\dotnet\linux-musl-x64\native;%(AdditionalLibraryDirectories)</AdditionalLibraryDirectories>
+      <LibraryDependencies>m;vrapi;GL;EGL;GLESv3;%(LibraryDependencies)</LibraryDependencies>
+      <AdditionalLibraryDirectories>$(SolutionDir)..\lib\dotnet\linux-musl-x64\native;$(SolutionDir)GL4ES\obj\local\x86_64;%(AdditionalLibraryDirectories)</AdditionalLibraryDirectories>
     </Link>
   </ItemDefinitionGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Release|x64'">
     <ClCompile>
       <PrecompiledHeader>Use</PrecompiledHeader>
       <PrecompiledHeaderFile>pch.h</PrecompiledHeaderFile>
-      <AdditionalIncludeDirectories>$(SolutionDir)..\lib\dotnet\linux-musl-x64\native;$(SolutionDir)..\lib\quest;$(MSBuildProjectDirectory)\inc;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <AdditionalIncludeDirectories>$(SolutionDir)..\lib\dotnet\linux-musl-x64\native;$(SolutionDir)..\lib\quest;$(SolutionDir)..\lib\gl4es\include;$(MSBuildProjectDirectory)\include;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
     </ClCompile>
     <Link>
-      <LibraryDependencies>nethost;%(LibraryDependencies)</LibraryDependencies>
-      <AdditionalLibraryDirectories>$(SolutionDir)..\lib\dotnet\linux-musl-x64\native;%(AdditionalLibraryDirectories)</AdditionalLibraryDirectories>
+      <LibraryDependencies>m;vrapi;GL;EGL;GLESv3;%(LibraryDependencies)</LibraryDependencies>
+      <AdditionalLibraryDirectories>$(SolutionDir)..\lib\dotnet\linux-musl-x64\native;$(SolutionDir)GL4ES\obj\local\x86_64%(AdditionalLibraryDirectories)</AdditionalLibraryDirectories>
     </Link>
   </ItemDefinitionGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Debug|ARM64'">
     <ClCompile>
       <PrecompiledHeader>Use</PrecompiledHeader>
       <PrecompiledHeaderFile>pch.h</PrecompiledHeaderFile>
-      <AdditionalIncludeDirectories>$(SolutionDir)..\lib\dotnet\linux-arm64\native;$(SolutionDir)..\lib\quest;$(MSBuildProjectDirectory)\inc;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <AdditionalIncludeDirectories>$(SolutionDir)..\lib\dotnet\linux-arm64\native;$(SolutionDir)..\lib\quest;$(SolutionDir)..\lib\gl4es\include;$(MSBuildProjectDirectory)\include;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
     </ClCompile>
     <Link>
-      <LibraryDependencies>nethost;%(LibraryDependencies)</LibraryDependencies>
-      <AdditionalLibraryDirectories>$(SolutionDir)..\lib\dotnet\linux-arm64\native;%(AdditionalLibraryDirectories)</AdditionalLibraryDirectories>
+      <LibraryDependencies>m;vrapi;GL;EGL;GLESv3;%(LibraryDependencies)</LibraryDependencies>
+      <AdditionalLibraryDirectories>$(SolutionDir)..\lib\dotnet\linux-arm64\native;$(SolutionDir)..\lib\quest\arm64-v8a\Debug;$(SolutionDir)GL4ES\obj\local\arm64-v8a;%(AdditionalLibraryDirectories)</AdditionalLibraryDirectories>
     </Link>
   </ItemDefinitionGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Release|ARM64'">
     <ClCompile>
       <PrecompiledHeader>Use</PrecompiledHeader>
       <PrecompiledHeaderFile>pch.h</PrecompiledHeaderFile>
-      <AdditionalIncludeDirectories>$(SolutionDir)..\lib\dotnet\linux-arm64\native$(SolutionDir)..\lib\quest;$(MSBuildProjectDirectory)\inc;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <AdditionalIncludeDirectories>$(SolutionDir)..\lib\dotnet\linux-arm64\native;$(SolutionDir)..\lib\quest;$(SolutionDir)..\lib\gl4es\include;$(MSBuildProjectDirectory)\include;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
     </ClCompile>
     <Link>
-      <LibraryDependencies>nethost;%(LibraryDependencies)</LibraryDependencies>
-      <AdditionalLibraryDirectories>$(SolutionDir)..\lib\dotnet\linux-arm64\native;%(AdditionalLibraryDirectories)</AdditionalLibraryDirectories>
+      <LibraryDependencies>m;vrapi;GL;EGL;GLESv3;%(LibraryDependencies)</LibraryDependencies>
+      <AdditionalLibraryDirectories>$(SolutionDir)..\lib\dotnet\linux-arm64\native;$(SolutionDir)..\lib\quest\arm64-v8a\Release;$(SolutionDir)GL4ES\obj\local\Arm64%(AdditionalLibraryDirectories)</AdditionalLibraryDirectories>
     </Link>
   </ItemDefinitionGroup>
   <ItemGroup>
-    <ClCompile Include="argtable3.cpp" />
-    <ClCompile Include="DotQuestJNI.cpp" />
-    <ClCompile Include="DotNetHost.cpp" />
+    <ClCompile Include="lib\argtable3.cpp" />
+    <ClCompile Include="lib\Math.cpp" />
+    <ClCompile Include="MainActivity.cpp" />
+    <ClCompile Include="DotNetHost.cpp">
+      <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">true</ExcludedFromBuild>
+      <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Debug|ARM64'">true</ExcludedFromBuild>
+    </ClCompile>
+    <ClCompile Include="VrCompositor.cpp" />
   </ItemGroup>
   <ItemGroup>
-    <ClInclude Include="argtable3.h" />
-    <ClInclude Include="DotQuestJNI.h" />
+    <ClInclude Include="lib\argtable3.h" />
+    <ClInclude Include="lib\Math.h" />
+    <ClInclude Include="VrCompositor.h" />
     <ClInclude Include="pch.h" />
+    <ClInclude Include="VrClientInfo.h" />
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
   <ImportGroup Label="ExtensionTargets" />

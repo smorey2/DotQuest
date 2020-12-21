@@ -61,22 +61,16 @@
     <JavaCompile Include="app\src\main\java\com\dotquest\quest\DotQuestJNI.java" />
   </ItemGroup>
   <ItemGroup>
+    <Content Include="app\src\main\assets\aarch64\ld-musl-aarch64.so.1" />
+    <Content Include="app\src\main\assets\aarch64\libgcc_s.so.1" />
+    <Content Include="app\src\main\assets\aarch64\libstdc++.so.6.0.28" />
     <Content Include="app\src\main\assets\main.cfg" />
     <Content Include="app\src\main\assets\x86_64\ld-musl-x86_64.so.1" />
-    <Content Include="app\src\main\assets\x86_64\libcrypto.so.1.1" />
     <Content Include="app\src\main\assets\x86_64\libgcc_s.so.1" />
-    <Content Include="app\src\main\assets\x86_64\libpam.so.0" />
-    <Content Include="app\src\main\assets\x86_64\libpamc.so.0" />
-    <Content Include="app\src\main\assets\x86_64\libpam_misc.so.0" />
-    <Content Include="app\src\main\assets\x86_64\libssl.so.1.1" />
-    <Content Include="app\src\main\assets\x86_64\libstdc++.so.6" />
-    <Content Include="app\src\main\assets\x86_64\libz.so.1" />
+    <Content Include="app\src\main\assets\x86_64\libstdc++.so.6.0.28" />
     <Content Include="app\src\main\libs\arm64-v8a\libnethost.so" />
     <Content Include="app\src\main\libs\x86_64\libnethost.so" />
     <Content Include="app\src\main\res\values\strings.xml" />
-  </ItemGroup>
-  <ItemGroup>
-    <ProjectReference Include="..\DotQuestJNI\DotQuestJNI.vcxproj" />
   </ItemGroup>
   <Import Project="$(AndroidTargetsPath)\Android.targets" />
   <ImportGroup Label="ExtensionTargets" />

@@ -48,19 +48,17 @@ public class MainActivity extends Activity implements SurfaceHolder.Callback {
 	private SurfaceHolder _surfaceHolder;
 	private long _nativeHandle;
 
-	public static void initialize() {
+	public void initialize() {
 		// The static nature of the singleton and Android quirkyness force us to initialize everything here
 		// Otherwise, when exiting the app and returning to it, these variables *keep* their pre exit values
 		_singleton = null;
 		_audioTrack = null;
 		_audioRecord = null;
+		_nativeHandle = 0;
 	}
 
 	public void shutdown() {
 		System.exit(0);
-	}
-
-	public MainActivity() {
 	}
 
 	private void load() {
@@ -70,37 +68,29 @@ public class MainActivity extends Activity implements SurfaceHolder.Callback {
 		PrintFolder("/data/data/com.dotquest.quest", true);
 		Log.v(TAG, "----------------------------------------------------------------");
 		String arch = System.getProperty("os.arch");
-		if (arch.equals("arm64-v8a")) {
-			load_asset("/data/data/com.dotquest.quest/app_lib", "arm64-v8a/ld-musl-x86_64.so.1", false);
+		if (arch.equals("aarch64")) {
+			load_asset("/data/data/com.dotquest.quest/app_lib", "aarch64/ld-musl-aarch64.so.1", false);
+			load_asset("/data/data/com.dotquest.quest/app_lib", "aarch64/libgcc_s.so.1", false);
+			load_asset("/data/data/com.dotquest.quest/app_lib", "aarch64/libstdc++.so.6.0.28", false);
 		} else if (arch.equals("x86_64")) {
-			// lib
 			load_asset("/data/data/com.dotquest.quest/app_lib", "x86_64/ld-musl-x86_64.so.1", false);
-			load_asset("/data/data/com.dotquest.quest/app_lib", "x86_64/libcrypto.so.1.1", false);
-			load_asset("/data/data/com.dotquest.quest/app_lib", "x86_64/libpam.so.0", false); //: 0.84.2
-			load_asset("/data/data/com.dotquest.quest/app_lib", "x86_64/libpam_misc.so.0", false); //: 0.82.1
-			load_asset("/data/data/com.dotquest.quest/app_lib", "x86_64/libpamc.so.0", false); //: 0.82.1
-			load_asset("/data/data/com.dotquest.quest/app_lib", "x86_64/libssl.so.1.1", false);
-			load_asset("/data/data/com.dotquest.quest/app_lib", "x86_64/libz.so.1", false); //: 1.2.11
-			// usr/lib
 			load_asset("/data/data/com.dotquest.quest/app_lib", "x86_64/libgcc_s.so.1", false);
-			load_asset("/data/data/com.dotquest.quest/app_lib", "x86_64/libstdc++.so.6", false); //: 6.0.28
+			load_asset("/data/data/com.dotquest.quest/app_lib", "x86_64/libstdc++.so.6.0.28", false);
 		} else {
 			Log.v(TAG, "UNKNOWN: [" + arch +"]");
 			System.exit(0);
 		}
-		Log.v(TAG, "LOADED");
-		System.loadLibrary("DotQuestJNI");
-		Log.v(TAG, "LOADED!!");
+		System.loadLibrary("DotQuest");
 	}
 
 	@Override
 	protected void onCreate(Bundle savedInstanceState) {
-		load();
+		//load();
 		Log.v(TAG, "----------------------------------------------------------------");
 		Log.v(TAG, "MainActivity::onCreate()");
 		super.onCreate(savedInstanceState);
 
-		MainActivity.initialize();
+		initialize();
 
 		// So we can call stuff from static callbacks
 		_singleton = this;
@@ -121,7 +111,7 @@ public class MainActivity extends Activity implements SurfaceHolder.Callback {
 		checkPermissionsAndInitialize();
 	}
 
-	/** Initializes the Activity only if the permission has been granted. */
+	// Initializes the Activity only if the permission has been granted.
 	private void checkPermissionsAndInitialize() {
 		// permission: WRITE_EXTERNAL_STORAGE
 		if (ContextCompat.checkSelfPermission(this,
@@ -142,7 +132,7 @@ public class MainActivity extends Activity implements SurfaceHolder.Callback {
 			create();
 	}
 
-	/** Handles the user accepting the permission. */
+	// Handles the user accepting the permission.
 	@Override
 	public void onRequestPermissionsResult(int requestCode, String[] permissions, int[] results) {
 		// permission: WRITE_EXTERNAL_STORAGE
@@ -200,61 +190,6 @@ public class MainActivity extends Activity implements SurfaceHolder.Callback {
 		Log.v(TAG, "HANDLE: " + _nativeHandle);
 	}
 
-	public void load_asset(String path, String name, boolean force) {
-		copy_asset(path, name, force);
-		Log.v(TAG, "LOADED: " + name);
-		System.load(path + "/" + name);
-	}
-
-	public void copy_asset(String path, String name, boolean force) {
-		File f = new File(path + "/" + name);
-		if (!f.exists() || force) {
-			// ensure we have an appropriate folder
-			String fullname = path + "/" + name;
-			String directory = fullname.substring(0, fullname.lastIndexOf("/"));
-			new File(directory).mkdirs();
-			_copy_asset(name, path + "/" + name);
-		}
-	}
-
-	public void _copy_asset(String name_in, String name_out) {
-		AssetManager assets = this.getAssets();
-		try {
-			InputStream in = assets.open(name_in);
-			OutputStream out = new FileOutputStream(name_out);
-			copy_stream(in, out);
-			out.close();
-			in.close();
-		} catch (Exception e) {
-			e.printStackTrace();
-		}
-	}
-
-	public static void copy_stream(InputStream in, OutputStream out) throws IOException {
-		byte[] buf = new byte[1024];
-		while (true) {
-			int count = in.read(buf);
-			if (count <= 0)
-				break;
-			out.write(buf, 0, count);
-		}
-	}
-
-	private static void PrintFolder(String path, Boolean recurse) {
-		File file = new File(path);
-		File[] files = file.listFiles();
-		if (files == null)
-			return;
-		String numFiles = String.valueOf(files.length);
-		if (files != null)
-			for (int i = 0; i < files.length; ++i) {
-				String subPath = files[i].getAbsolutePath();
-				Log.v(numFiles, subPath);
-				if (recurse)
-					PrintFolder(subPath, recurse);
-			}
-	}
-
 	@Override
 	protected void onStart() {
 		Log.v(TAG, "MainActivity::onStart()");
@@ -291,9 +226,8 @@ public class MainActivity extends Activity implements SurfaceHolder.Callback {
 		}
 		DotQuestJNI.onDestroy(_nativeHandle);
 		super.onDestroy();
-		// Reset everything in case the user re opens the app
-		MainActivity.initialize();
-		_nativeHandle = 0;
+		// Reset everything in case the user re-opens the app
+		initialize();
 	}
 
 	@Override
@@ -321,5 +255,61 @@ public class MainActivity extends Activity implements SurfaceHolder.Callback {
 			DotQuestJNI.onSurfaceDestroyed(_nativeHandle);
 			_surfaceHolder = null;
 		}
+	}
+
+
+	// UTILS
+
+	public void load_asset(String path, String name, boolean force) {
+		copy_asset(path, name, force);
+		Log.v(TAG, "LOAD: " + name);
+		System.load(path + "/" + name);
+	}
+
+	public void copy_asset(String path, String name, boolean force) {
+		File f = new File(path + "/" + name);
+		if (!f.exists() || force) {
+			String fullname = path + "/" + name;
+			String directory = fullname.substring(0, fullname.lastIndexOf("/"));
+			new File(directory).mkdirs();
+			_copy_asset(name, path + "/" + name);
+		}
+	}
+
+	public void _copy_asset(String name_in, String name_out) {
+		AssetManager assets = this.getAssets();
+		try {
+			InputStream in = assets.open(name_in);
+			OutputStream out = new FileOutputStream(name_out);
+			copy_stream(in, out);
+			out.close();
+			in.close();
+		} catch (Exception e) {
+			e.printStackTrace();
+		}
+	}
+
+	public static void copy_stream(InputStream in, OutputStream out) throws IOException {
+		byte[] buf = new byte[1024];
+		while (true) {
+			int count = in.read(buf);
+			if (count <= 0)
+				break;
+			out.write(buf, 0, count);
+		}
+	}
+
+	private static void PrintFolder(String path, Boolean recurse) {
+		File file = new File(path);
+		File[] files = file.listFiles();
+		if (files == null)
+			return;
+		if (files != null)
+			for (int i = 0; i < files.length; ++i) {
+				String subPath = files[i].getAbsolutePath();
+				Log.v(TAG, subPath);
+				if (recurse)
+					PrintFolder(subPath, recurse);
+			}
 	}
 }

@@ -16,14 +16,14 @@
 #define DIR_SEPARATOR '/'
 #define MAX_PATH PATH_MAX
 
-#define LOG_TAG "GAMETAG"
-#define LOGI(...) ((void)__android_log_print(ANDROID_LOG_INFO, LOG_TAG, __VA_ARGS__))
-#define LOGW(...) ((void)__android_log_print(ANDROID_LOG_WARN, LOG_TAG, __VA_ARGS__))
-#define LOGE(...) ((void)__android_log_print(ANDROID_LOG_ERROR, LOG_TAG, __VA_ARGS__))
+#define ALOG_TAG "GAMETAG"
+#define ALOGI(...) ((void)__android_log_print(ANDROID_LOG_INFO, ALOG_TAG, __VA_ARGS__))
+#define ALOGW(...) ((void)__android_log_print(ANDROID_LOG_WARN, ALOG_TAG, __VA_ARGS__))
+#define ALOGE(...) ((void)__android_log_print(ANDROID_LOG_ERROR, ALOG_TAG, __VA_ARGS__))
 #if _DEBUG
 #define LOGV(...) ((void)__android_log_print(ANDROID_LOG_VERBOSE, LOG_TAG, __VA_ARGS__))
 #else
-#define LOGV(...)
+#define ALOGV(...)
 #endif
 
 using string_t = std::basic_string<char_t>;
@@ -42,7 +42,7 @@ namespace
 
 int dotnet(int argc, char *argv[])
 {
-    LOGV("DOTNET");
+    ALOGV("DOTNET");
     // Get the current executable's directory
     // This sample assumes the managed assembly to load and its runtime configuration file are next to the host
     char_t host_path[MAX_PATH];

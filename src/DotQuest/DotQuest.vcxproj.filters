@@ -1,0 +1,30 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<Project ToolsVersion="4.0" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
+  <ItemGroup>
+    <ClCompile Include="DotNetHost.cpp" />
+    <ClCompile Include="MainActivity.cpp" />
+    <ClCompile Include="lib\argtable3.cpp">
+      <Filter>lib</Filter>
+    </ClCompile>
+    <ClCompile Include="lib\Math.cpp">
+      <Filter>lib</Filter>
+    </ClCompile>
+    <ClCompile Include="VrCompositor.cpp" />
+  </ItemGroup>
+  <ItemGroup>
+    <ClInclude Include="VrCompositor.h" />
+    <ClInclude Include="pch.h" />
+    <ClInclude Include="VrClientInfo.h" />
+    <ClInclude Include="lib\argtable3.h">
+      <Filter>lib</Filter>
+    </ClInclude>
+    <ClInclude Include="lib\Math.h">
+      <Filter>lib</Filter>
+    </ClInclude>
+  </ItemGroup>
+  <ItemGroup>
+    <Filter Include="lib">
+      <UniqueIdentifier>{f2a2b494-2e81-4244-b1ce-63ec266f7c98}</UniqueIdentifier>
+    </Filter>
+  </ItemGroup>
+</Project>
