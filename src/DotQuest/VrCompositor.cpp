@@ -7,8 +7,13 @@
 #include <VrApi_Helpers.h>
 
 #include "VrCompositor.h"
+#include <dlfcn.h>
 
 vr_client_info_t vr;
+
+void* proc_address(void* lib, const char* name) {
+	return dlsym(lib, name);
+}
 
 /*
 ================================================================================

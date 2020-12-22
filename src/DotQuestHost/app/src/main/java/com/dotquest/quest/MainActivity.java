@@ -69,23 +69,24 @@ public class MainActivity extends Activity implements SurfaceHolder.Callback {
 		Log.v(TAG, "----------------------------------------------------------------");
 		String arch = System.getProperty("os.arch");
 		if (arch.equals("aarch64")) {
-			load_asset("/data/data/com.dotquest.quest/app_lib", "aarch64/ld-musl-aarch64.so.1", false);
-			load_asset("/data/data/com.dotquest.quest/app_lib", "aarch64/libgcc_s.so.1", false);
-			load_asset("/data/data/com.dotquest.quest/app_lib", "aarch64/libstdc++.so.6.0.28", false);
+			//load_asset("/data/data/com.dotquest.quest/app_lib", "aarch64/ld-musl-aarch64.so.1", false);
+			//load_asset("/data/data/com.dotquest.quest/app_lib", "aarch64/libgcc_s.so.1", false);
+			//load_asset("/data/data/com.dotquest.quest/app_lib", "aarch64/libstdc++.so.6.0.28", false);
 		} else if (arch.equals("x86_64")) {
-			load_asset("/data/data/com.dotquest.quest/app_lib", "x86_64/ld-musl-x86_64.so.1", false);
-			load_asset("/data/data/com.dotquest.quest/app_lib", "x86_64/libgcc_s.so.1", false);
-			load_asset("/data/data/com.dotquest.quest/app_lib", "x86_64/libstdc++.so.6.0.28", false);
+			//load_asset("/data/data/com.dotquest.quest/app_lib", "x86_64/ld-musl-x86_64.so.1", false);
+			//load_asset("/data/data/com.dotquest.quest/app_lib", "x86_64/libgcc_s.so.1", false);
+			//load_asset("/data/data/com.dotquest.quest/app_lib", "x86_64/libstdc++.so.6.0.28", false);
 		} else {
 			Log.v(TAG, "UNKNOWN: [" + arch +"]");
 			System.exit(0);
 		}
+		System.loadLibrary("gnustl_shared");
 		System.loadLibrary("DotQuest");
 	}
 
 	@Override
 	protected void onCreate(Bundle savedInstanceState) {
-		//load();
+		load();
 		Log.v(TAG, "----------------------------------------------------------------");
 		Log.v(TAG, "MainActivity::onCreate()");
 		super.onCreate(savedInstanceState);
@@ -186,7 +187,7 @@ public class MainActivity extends Activity implements SurfaceHolder.Callback {
 		} catch (Exception e) {
 		}
 
-		_nativeHandle = DotQuestJNI.onCreate(this, commandLineParams);
+		_nativeHandle = MainActivityJNI.onCreate(this, commandLineParams);
 		Log.v(TAG, "HANDLE: " + _nativeHandle);
 	}
 
@@ -194,27 +195,27 @@ public class MainActivity extends Activity implements SurfaceHolder.Callback {
 	protected void onStart() {
 		Log.v(TAG, "MainActivity::onStart()");
 		super.onStart();
-		DotQuestJNI.onStart(_nativeHandle, this);
+		MainActivityJNI.onStart(_nativeHandle, this);
 	}
 
 	@Override
 	protected void onResume() {
 		Log.v(TAG, "MainActivity::onResume()");
 		super.onResume();
-		DotQuestJNI.onResume(_nativeHandle);
+		MainActivityJNI.onResume(_nativeHandle);
 	}
 
 	@Override
 	protected void onPause() {
 		Log.v(TAG, "MainActivity::onPause()");
-		DotQuestJNI.onPause(_nativeHandle);
+		MainActivityJNI.onPause(_nativeHandle);
 		super.onPause();
 	}
 
 	@Override
 	protected void onStop() {
 		Log.v(TAG, "MainActivity::onStop()");
-		DotQuestJNI.onStop(_nativeHandle);
+		MainActivityJNI.onStop(_nativeHandle);
 		super.onStop();
 	}
 
@@ -222,9 +223,9 @@ public class MainActivity extends Activity implements SurfaceHolder.Callback {
 	protected void onDestroy() {
 		Log.v(TAG, "MainActivity::onDestroy()");
 		if (_surfaceHolder != null) {
-			DotQuestJNI.onSurfaceDestroyed(_nativeHandle);
+			MainActivityJNI.onSurfaceDestroyed(_nativeHandle);
 		}
-		DotQuestJNI.onDestroy(_nativeHandle);
+		MainActivityJNI.onDestroy(_nativeHandle);
 		super.onDestroy();
 		// Reset everything in case the user re-opens the app
 		initialize();
@@ -234,7 +235,7 @@ public class MainActivity extends Activity implements SurfaceHolder.Callback {
 	public void surfaceCreated(SurfaceHolder holder) {
 		Log.v(TAG, "MainActivity::surfaceCreated()");
 		if (_nativeHandle != 0) {
-			DotQuestJNI.onSurfaceCreated(_nativeHandle, holder.getSurface());
+			MainActivityJNI.onSurfaceCreated(_nativeHandle, holder.getSurface());
 			_surfaceHolder = holder;
 		}
 	}
@@ -243,7 +244,7 @@ public class MainActivity extends Activity implements SurfaceHolder.Callback {
 	public void surfaceChanged(SurfaceHolder holder, int format, int width, int height) {
 		Log.v(TAG, "MainActivity::surfaceChanged()");
 		if (_nativeHandle != 0) {
-			DotQuestJNI.onSurfaceChanged(_nativeHandle, holder.getSurface());
+			MainActivityJNI.onSurfaceChanged(_nativeHandle, holder.getSurface());
 			_surfaceHolder = holder;
 		}
 	}
@@ -252,7 +253,7 @@ public class MainActivity extends Activity implements SurfaceHolder.Callback {
 	public void surfaceDestroyed(SurfaceHolder holder) {
 		Log.v(TAG, "MainActivity::surfaceDestroyed()");
 		if (_nativeHandle != 0) {
-			DotQuestJNI.onSurfaceDestroyed(_nativeHandle);
+			MainActivityJNI.onSurfaceDestroyed(_nativeHandle);
 			_surfaceHolder = null;
 		}
 	}

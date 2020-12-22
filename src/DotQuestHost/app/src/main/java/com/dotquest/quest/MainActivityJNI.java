@@ -5,7 +5,7 @@ import android.view.Surface;
 
 //import java.nio.ByteBuffer;
 
-public class DotQuestJNI {
+public class MainActivityJNI {
 	// Activity lifecycle
 	public static native long onCreate(Activity obj, String commandLineParams);
 
