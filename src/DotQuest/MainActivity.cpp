@@ -5,6 +5,7 @@
 #include <jni.h>
 #include <sys/resource.h>
 #include <pthread.h>
+#include <sys/prctl.h>					// for prctl( PR_SET_NAME )
 
 //#include <EGL/egl.h>
 //#include <EGL/eglext.h>
@@ -130,7 +131,7 @@ static void ovrEgl_CreateContext(ovrEgl* egl, const ovrEgl* shareEgl) {
 	if (egl->Display != 0)
 		return;
 	egl->Display = eglGetDisplay(EGL_DEFAULT_DISPLAY);
-	ALOGV("        eglInitialize( Display, &MajorVersion, &MinorVersion )");
+	ALOGV("eglInitialize(Display, &MajorVersion, &MinorVersion)");
 	eglInitialize(egl->Display, &egl->MajorVersion, &egl->MinorVersion);
 	// Do NOT use eglChooseConfig, because the Android EGL code pushes in multisample
 	// flags in eglChooseConfig if the user has selected the "force 4x MSAA" option in
@@ -139,7 +140,7 @@ static void ovrEgl_CreateContext(ovrEgl* egl, const ovrEgl* shareEgl) {
 	EGLConfig configs[MAX_CONFIGS];
 	EGLint numConfigs = 0;
 	if (eglGetConfigs(egl->Display, configs, MAX_CONFIGS, &numConfigs) == EGL_FALSE) {
-		ALOGE("        eglGetConfigs() failed: %s", EglErrorString(eglGetError()));
+		ALOGE("eglGetConfigs() failed: %s", EglErrorString(eglGetError()));
 		return;
 	}
 	const EGLint configAttribs[] = {
@@ -185,10 +186,10 @@ static void ovrEgl_CreateContext(ovrEgl* egl, const ovrEgl* shareEgl) {
 		EGL_CONTEXT_CLIENT_VERSION, 3,
 		EGL_NONE
 	};
-	ALOGV("        Context = eglCreateContext( Display, Config, EGL_NO_CONTEXT, contextAttribs )");
+	ALOGV("Context = eglCreateContext(Display, Config, EGL_NO_CONTEXT, contextAttribs)");
 	egl->Context = eglCreateContext(egl->Display, egl->Config, (shareEgl != NULL) ? shareEgl->Context : EGL_NO_CONTEXT, contextAttribs);
 	if (egl->Context == EGL_NO_CONTEXT) {
-		ALOGE("        eglCreateContext() failed: %s", EglErrorString(eglGetError()));
+		ALOGE("eglCreateContext() failed: %s", EglErrorString(eglGetError()));
 		return;
 	}
 	const EGLint surfaceAttribs[] = {
@@ -196,7 +197,7 @@ static void ovrEgl_CreateContext(ovrEgl* egl, const ovrEgl* shareEgl) {
 		EGL_HEIGHT, 16,
 		EGL_NONE
 	};
-	ALOGV("        TinySurface = eglCreatePbufferSurface( Display, Config, surfaceAttribs )");
+	ALOGV("TinySurface = eglCreatePbufferSurface(Display, Config, surfaceAttribs)");
 	egl->TinySurface = eglCreatePbufferSurface(egl->Display, egl->Config, surfaceAttribs);
 	if (egl->TinySurface == EGL_NO_SURFACE) {
 		ALOGE("        eglCreatePbufferSurface() failed: %s", EglErrorString(eglGetError()));
@@ -204,7 +205,7 @@ static void ovrEgl_CreateContext(ovrEgl* egl, const ovrEgl* shareEgl) {
 		egl->Context = EGL_NO_CONTEXT;
 		return;
 	}
-	ALOGV("        eglMakeCurrent( Display, TinySurface, TinySurface, Context )");
+	ALOGV("        eglMakeCurrent(Display, TinySurface, TinySurface, Context)");
 	if (eglMakeCurrent(egl->Display, egl->TinySurface, egl->TinySurface, egl->Context) == EGL_FALSE) {
 		ALOGE("        eglMakeCurrent() failed: %s", EglErrorString(eglGetError()));
 		eglDestroySurface(egl->Display, egl->TinySurface);
@@ -216,26 +217,26 @@ static void ovrEgl_CreateContext(ovrEgl* egl, const ovrEgl* shareEgl) {
 
 static void ovrEgl_DestroyContext(ovrEgl* egl) {
 	if (egl->Display != 0) {
-		ALOGE("        eglMakeCurrent( Display, EGL_NO_SURFACE, EGL_NO_SURFACE, EGL_NO_CONTEXT )");
+		ALOGE("        eglMakeCurrent(Display, EGL_NO_SURFACE, EGL_NO_SURFACE, EGL_NO_CONTEXT)");
 		if (eglMakeCurrent(egl->Display, EGL_NO_SURFACE, EGL_NO_SURFACE, EGL_NO_CONTEXT) == EGL_FALSE)
 			ALOGE("        eglMakeCurrent() failed: %s", EglErrorString(eglGetError()));
 	}
 	if (egl->Context != EGL_NO_CONTEXT) {
-		ALOGE("        eglDestroyContext( Display, Context )");
+		ALOGE("eglDestroyContext(Display, Context)");
 		if (eglDestroyContext(egl->Display, egl->Context) == EGL_FALSE)
-			ALOGE("        eglDestroyContext() failed: %s", EglErrorString(eglGetError()));
+			ALOGE("eglDestroyContext() failed: %s", EglErrorString(eglGetError()));
 		egl->Context = EGL_NO_CONTEXT;
 	}
 	if (egl->TinySurface != EGL_NO_SURFACE) {
-		ALOGE("        eglDestroySurface( Display, TinySurface )");
+		ALOGE("eglDestroySurface( Display, TinySurface )");
 		if (eglDestroySurface(egl->Display, egl->TinySurface) == EGL_FALSE)
-			ALOGE("        eglDestroySurface() failed: %s", EglErrorString(eglGetError()));
+			ALOGE("eglDestroySurface() failed: %s", EglErrorString(eglGetError()));
 		egl->TinySurface = EGL_NO_SURFACE;
 	}
 	if (egl->Display != 0) {
-		ALOGE("        eglTerminate( Display )");
+		ALOGE("eglTerminate( Display )");
 		if (eglTerminate(egl->Display) == EGL_FALSE)
-			ALOGE("        eglTerminate() failed: %s", EglErrorString(eglGetError()));
+			ALOGE("eglTerminate() failed: %s", EglErrorString(eglGetError()));
 		egl->Display = 0;
 	}
 }
@@ -436,14 +437,14 @@ void ovrRenderer_Clear(ovrRenderer* renderer) {
 void ovrRenderer_Create(int width, int height, ovrRenderer* renderer, const ovrJava* java) {
 	renderer->NumBuffers = VRAPI_FRAME_LAYER_EYE_MAX;
 
-	//Now using a symmetrical render target, based on the horizontal FOV
+	// now using a symmetrical render target, based on the horizontal FOV
 	vr.fov = vrapi_GetSystemPropertyInt(java, VRAPI_SYS_PROP_SUGGESTED_EYE_FOV_DEGREES_Y);
 
-	// Create the render Textures.
+	// create the render Textures.
 	for (int eye = 0; eye < VRAPI_FRAME_LAYER_EYE_MAX; eye++)
 		ovrFramebuffer_Create(&renderer->FrameBuffer[eye], GL_RGBA8, width, height, NUM_MULTI_SAMPLES);
 
-	// Setup the projection matrix.
+	// setup the projection matrix.
 	renderer->ProjectionMatrix = ovrMatrix4f_CreateProjectionFov(vr.fov, vr.fov, 0.0f, 0.0f, 1.0f, 0.0f);
 }
 
@@ -521,50 +522,47 @@ static void ovrApp_PushBlackFinal(ovrApp* app) {
 }
 
 static void ovrApp_HandleVrModeChanges(ovrApp* app) {
-	if (app->Resumed != false && app->NativeWindow != NULL) {
-		if (app->Ovr == NULL) {
-			ovrModeParms parms = vrapi_DefaultModeParms(&app->Java);
-			// Must reset the FLAG_FULLSCREEN window flag when using a SurfaceView
-			parms.Flags |= VRAPI_MODE_FLAG_RESET_WINDOW_FULLSCREEN;
+	if (app->Resumed && app->NativeWindow) {
+		if (app->Ovr)
+			return;
+		ovrModeParms parms = vrapi_DefaultModeParms(&app->Java);
+		// Must reset the FLAG_FULLSCREEN window flag when using a SurfaceView
+		parms.Flags |= VRAPI_MODE_FLAG_RESET_WINDOW_FULLSCREEN;
 
-			parms.Flags |= VRAPI_MODE_FLAG_NATIVE_WINDOW;
-			parms.Display = (size_t)app->Egl.Display;
-			parms.WindowSurface = (size_t)app->NativeWindow;
-			parms.ShareContext = (size_t)app->Egl.Context;
+		parms.Flags |= VRAPI_MODE_FLAG_NATIVE_WINDOW;
+		parms.Display = (size_t)app->Egl.Display;
+		parms.WindowSurface = (size_t)app->NativeWindow;
+		parms.ShareContext = (size_t)app->Egl.Context;
 
-			ALOGV("        eglGetCurrentSurface(EGL_DRAW) = %p", eglGetCurrentSurface(EGL_DRAW));
-			ALOGV("        vrapi_EnterVrMode()");
-			app->Ovr = vrapi_EnterVrMode(&parms);
-			ALOGV("        eglGetCurrentSurface(EGL_DRAW) = %p", eglGetCurrentSurface(EGL_DRAW));
-
-			// If entering VR mode failed then the ANativeWindow was not valid.
-			if (app->Ovr == NULL) {
-				ALOGE("Invalid ANativeWindow!");
-				app->NativeWindow = NULL;
-			}
-
-			// Set performance parameters once we have entered VR mode and have a valid ovrMobile.
-			if (app->Ovr != NULL) {
-				ovrResult result = vrapi_SetDisplayRefreshRate(app->Ovr, maximumSupportedFramerate);
-				if (result == ovrSuccess)  ALOGV("Changed refresh rate. %f Hz", maximumSupportedFramerate);
-				else ALOGV("Failed to change refresh rate to 90Hz Result = %d", result);
-				vrapi_SetClockLevels(app->Ovr, app->CpuLevel, app->GpuLevel);
-				ALOGV("		vrapi_SetClockLevels(%d, %d)", app->CpuLevel, app->GpuLevel);
-				vrapi_SetPerfThread(app->Ovr, VRAPI_PERF_THREAD_TYPE_MAIN, app->MainThreadTid);
-				ALOGV("		vrapi_SetPerfThread(MAIN, %d)", app->MainThreadTid);
-				vrapi_SetPerfThread(app->Ovr, VRAPI_PERF_THREAD_TYPE_RENDERER, app->RenderThreadTid);
-				ALOGV("		vrapi_SetPerfThread(RENDERER, %d)", app->RenderThreadTid);
-			}
+		ALOGV("eglGetCurrentSurface(EGL_DRAW) = %p", eglGetCurrentSurface(EGL_DRAW));
+		ALOGV("vrapi_EnterVrMode()");
+		app->Ovr = vrapi_EnterVrMode(&parms);
+		ALOGV("eglGetCurrentSurface(EGL_DRAW) = %p", eglGetCurrentSurface(EGL_DRAW));
+		// If entering VR mode failed then the ANativeWindow was not valid.
+		if (!app->Ovr) {
+			ALOGE("Invalid ANativeWindow!");
+			app->NativeWindow = NULL;
+			return;
 		}
+
+		// Set performance parameters once we have entered VR mode and have a valid ovrMobile.
+		ovrResult result = vrapi_SetDisplayRefreshRate(app->Ovr, maximumSupportedFramerate);
+		if (result == ovrSuccess) ALOGV("Changed refresh rate. %f Hz", maximumSupportedFramerate);
+		else ALOGV("Failed to change refresh rate to 90Hz Result = %d", result);
+		vrapi_SetClockLevels(app->Ovr, app->CpuLevel, app->GpuLevel);
+		ALOGV("vrapi_SetClockLevels(%d, %d)", app->CpuLevel, app->GpuLevel);
+		vrapi_SetPerfThread(app->Ovr, VRAPI_PERF_THREAD_TYPE_MAIN, app->MainThreadTid);
+		ALOGV("vrapi_SetPerfThread(MAIN, %d)", app->MainThreadTid);
+		vrapi_SetPerfThread(app->Ovr, VRAPI_PERF_THREAD_TYPE_RENDERER, app->RenderThreadTid);
+		ALOGV("vrapi_SetPerfThread(RENDERER, %d)", app->RenderThreadTid);
 	}
 	else {
-		if (app->Ovr != NULL) {
-			ALOGV("        eglGetCurrentSurface(EGL_DRAW) = %p", eglGetCurrentSurface(EGL_DRAW));
-			ALOGV("        vrapi_LeaveVrMode()");
-			vrapi_LeaveVrMode(app->Ovr);
-			app->Ovr = NULL;
-			ALOGV("        eglGetCurrentSurface(EGL_DRAW) = %p", eglGetCurrentSurface(EGL_DRAW));
-		}
+		if (!app->Ovr)
+			return;
+		ALOGV("eglGetCurrentSurface(EGL_DRAW) = %p", eglGetCurrentSurface(EGL_DRAW));
+		ALOGV("vrapi_LeaveVrMode()");
+		vrapi_LeaveVrMode(app->Ovr); app->Ovr = NULL;
+		ALOGV("eglGetCurrentSurface(EGL_DRAW) = %p", eglGetCurrentSurface(EGL_DRAW));
 	}
 }
 
@@ -603,7 +601,7 @@ static int ovrMessage_GetIntegerParm(ovrMessage* message, int index) { return (i
 static void ovrMessage_SetFloatParm(ovrMessage* message, int index, float value) { *(float*)&message->Parms[index] = value; }
 static float ovrMessage_GetFloatParm(ovrMessage* message, int index) { return *(float*)&message->Parms[index]; }
 
-// Cyclic queue with messages.
+// cyclic queue with messages.
 typedef struct {
 	ovrMessage	 		Messages[MAX_MESSAGES];
 	volatile int		Head;	// dequeue at the head
@@ -714,17 +712,11 @@ static bool ovrMessageQueue_GetNextMessage(ovrMessageQueue* messageQueue, ovrMes
 	return true;
 }
 
-
-
 /*
 ================================================================================
 ovrAppThread
 ================================================================================
 */
-
-void* AppThreadFunction(void* parm) {
-	//gAppThread = (ovrAppThread*)parm;
-}
 
 enum {
 	MESSAGE_ON_CREATE,
@@ -746,6 +738,8 @@ typedef struct {
 	ANativeWindow* NativeWindow;
 } ovrAppThread;
 
+void* AppThreadFunction(void* parm);
+
 static void ovrAppThread_Create(ovrAppThread* appThread, JNIEnv* env, jobject activityObject, jclass activityClass) {
 	env->GetJavaVM(&appThread->JavaVm);
 	appThread->ActivityObject = env->NewGlobalRef(activityObject);
@@ -754,9 +748,9 @@ static void ovrAppThread_Create(ovrAppThread* appThread, JNIEnv* env, jobject ac
 	appThread->NativeWindow = NULL;
 	ovrMessageQueue_Create(&appThread->MessageQueue);
 
-	const int createErr = pthread_create(&appThread->Thread, NULL, AppThreadFunction, appThread);
-	if (createErr != 0)
-		ALOGE("pthread_create returned %i", createErr);
+	const int createError = pthread_create(&appThread->Thread, NULL, AppThreadFunction, appThread);
+	if (createError)
+		ALOGE("pthread_create returned %i", createError);
 }
 
 static void ovrAppThread_Destroy(ovrAppThread* appThread, JNIEnv* env) {
@@ -777,20 +771,20 @@ static JavaVM* _jVM;
 static jobject _shutdownCallbackObj = 0;
 
 jint JNI_OnLoad(JavaVM* vm, void* reserved) {
-	ALOGI("JNI_OnLoad");
+	ALOGV("JNI_OnLoad");
 	JNIEnv* env;
 	_jVM = vm;
-	if (vm->GetEnv((void**)&env, JNI_VERSION_1_4) != JNI_OK) {
+	if (_jVM->GetEnv((void**)&env, JNI_VERSION_1_4) != JNI_OK) {
 		ALOGE("Failed JNI_OnLoad");
 		return -1;
 	}
 	return JNI_VERSION_1_4;
 }
 
-void jni_shutdown() {
-	ALOGV("Calling: jni_shutdown");
+void JNI_Shutdown() {
+	ALOGV("JNI_Shutdown");
 	JNIEnv* env;
-	if ((_jVM->GetEnv((void**)&env, JNI_VERSION_1_4)) < 0) {
+	if (_jVM->GetEnv((void**)&env, JNI_VERSION_1_4) < 0) {
 		_jVM->AttachCurrentThread(&env, NULL);
 	}
 	return env->CallVoidMethod(_shutdownCallbackObj, _android_shutdown);
@@ -805,183 +799,316 @@ struct arg_end* end;
 char** argv;
 int argc = 0;
 
+extern "C" void initialize_gl4es();
+
 static int ParseCommandLine(char* cmdline, char** argv);
 
-extern "C" {
+extern "C" JNIEXPORT jlong JNICALL Java_com_dotquest_quest_MainActivityJNI_onCreate(JNIEnv * env, jclass activityClass, jobject activity, jstring commandLineParams) {
+	ALOGV("MainActivityJNI::onCreate()");
 
-	JNIEXPORT jlong JNICALL Java_com_dotquest_quest_DotQuestJNI_onCreate(JNIEnv* env, jclass activityClass, jobject activity, jstring commandLineParams) {
-		ALOGV("    DotQuestJNI::onCreate()");
+	// the global arg_xxx structs are initialised within the argtable
+	void* argtable[] = {
+		ss = arg_dbl0("s", "supersampling", "<double>", "super sampling value (e.g. 1.0)"),
+		cpu = arg_int0("c", "cpu", "<int>", "CPU perf index 1-4 (default: 2)"),
+		gpu = arg_int0("g", "gpu", "<int>", "GPU perf index 1-4 (default: 3)"),
+		msaa = arg_int0("m", "msaa", "<int>", "MSAA (default: 1)"),
+		end = arg_end(20)
+	};
 
-		// the global arg_xxx structs are initialised within the argtable
-		void* argtable[] = {
-			ss = arg_dbl0("s", "supersampling", "<double>", "super sampling value (e.g. 1.0)"),
-			cpu = arg_int0("c", "cpu", "<int>", "CPU perf index 1-4 (default: 2)"),
-			gpu = arg_int0("g", "gpu", "<int>", "GPU perf index 1-4 (default: 3)"),
-			msaa = arg_int0("m", "msaa", "<int>", "MSAA (default: 1)"),
-			end = arg_end(20)
-		};
+	jboolean iscopy;
+	const char* arg = env->GetStringUTFChars(commandLineParams, &iscopy);
+	char* cmdLine = arg && strlen(arg) ? strdup(arg) : NULL;
+	env->ReleaseStringUTFChars(commandLineParams, arg);
+	ALOGV("Command line %s", cmdLine);
+	argv = (char**)malloc(sizeof(char*) * 255);
+	argc = ParseCommandLine(strdup(cmdLine), argv);
 
-		jboolean iscopy;
-		const char* arg = env->GetStringUTFChars(commandLineParams, &iscopy);
+	// verify the argtable[] entries were allocated sucessfully
+	if (arg_nullcheck(argtable) == 0) {
+		// Parse the command line as defined by argtable[]
+		arg_parse(argc, argv, argtable);
+		if (ss->count > 0 && ss->dval[0] > 0.0)
+			SS_MULTIPLIER = ss->dval[0];
+		if (cpu->count > 0 && cpu->ival[0] > 0 && cpu->ival[0] < 10)
+			CPU_LEVEL = cpu->ival[0];
+		if (gpu->count > 0 && gpu->ival[0] > 0 && gpu->ival[0] < 10)
+			GPU_LEVEL = gpu->ival[0];
+		if (msaa->count > 0 && msaa->ival[0] > 0 && msaa->ival[0] < 10)
+			NUM_MULTI_SAMPLES = msaa->ival[0];
+	}
 
-		char* cmdLine = arg && strlen(arg) ? strdup(arg) : NULL;
+	initialize_gl4es();
 
-		env->ReleaseStringUTFChars(commandLineParams, arg);
+	ovrAppThread* appThread = (ovrAppThread*)malloc(sizeof(ovrAppThread));
+	ovrAppThread_Create(appThread, env, activity, activityClass);
+	ovrMessageQueue_Enable(&appThread->MessageQueue, true);
+	ovrMessage message;
+	ovrMessage_Init(&message, MESSAGE_ON_CREATE, MQ_WAIT_PROCESSED);
+	ovrMessageQueue_PostMessage(&appThread->MessageQueue, &message);
+	return (jlong)((size_t)appThread);
+}
 
-		ALOGV("Command line %s", cmdLine);
-		argv = (char**)malloc(sizeof(char*) * 255);
-		argc = ParseCommandLine(strdup(cmdLine), argv);
+extern "C" JNIEXPORT void JNICALL Java_com_dotquest_quest_MainActivityJNI_onStart(JNIEnv * env, jobject obj, jlong handle, jobject obj1) {
+	ALOGV("MainActivityJNI::onStart()");
+	_shutdownCallbackObj = (jobject)env->NewGlobalRef(obj1);
+	jclass callbackClass = env->GetObjectClass(_shutdownCallbackObj);
+	_android_shutdown = env->GetMethodID(callbackClass, "shutdown", "()V");
+	ovrAppThread* appThread = (ovrAppThread*)((size_t)handle);
+	ovrMessage message;
+	ovrMessage_Init(&message, MESSAGE_ON_START, MQ_WAIT_PROCESSED);
+	ovrMessageQueue_PostMessage(&appThread->MessageQueue, &message);
+}
 
-		// dotnet
-		//dotnet(argc, argv);
+extern "C" JNIEXPORT void JNICALL Java_com_dotquest_quest_MainActivityJNI_onResume(JNIEnv * env, jobject obj, jlong handle) {
+	ALOGV("MainActivityJNI::onResume()");
+	ovrAppThread* appThread = (ovrAppThread*)((size_t)handle);
+	ovrMessage message;
+	ovrMessage_Init(&message, MESSAGE_ON_RESUME, MQ_WAIT_PROCESSED);
+	ovrMessageQueue_PostMessage(&appThread->MessageQueue, &message);
+}
 
-		// verify the argtable[] entries were allocated sucessfully
-		if (arg_nullcheck(argtable) == 0) {
-			// Parse the command line as defined by argtable[]
-			arg_parse(argc, argv, argtable);
-			if (ss->count > 0 && ss->dval[0] > 0.0)
-				SS_MULTIPLIER = ss->dval[0];
-			if (cpu->count > 0 && cpu->ival[0] > 0 && cpu->ival[0] < 10)
-				CPU_LEVEL = cpu->ival[0];
-			if (gpu->count > 0 && gpu->ival[0] > 0 && gpu->ival[0] < 10)
-				GPU_LEVEL = gpu->ival[0];
-			if (msaa->count > 0 && msaa->ival[0] > 0 && msaa->ival[0] < 10)
-				NUM_MULTI_SAMPLES = msaa->ival[0];
+extern "C" JNIEXPORT void JNICALL Java_com_dotquest_quest_MainActivityJNI_onPause(JNIEnv * env, jobject obj, jlong handle) {
+	ALOGV("MainActivityJNI::onPause()");
+	ovrAppThread* appThread = (ovrAppThread*)((size_t)handle);
+	ovrMessage message;
+	ovrMessage_Init(&message, MESSAGE_ON_PAUSE, MQ_WAIT_PROCESSED);
+	ovrMessageQueue_PostMessage(&appThread->MessageQueue, &message);
+}
+
+extern "C" JNIEXPORT void JNICALL Java_com_dotquest_quest_MainActivityJNI_onStop(JNIEnv * env, jobject obj, jlong handle) {
+	ALOGV("MainActivityJNI::onStop()");
+	ovrAppThread* appThread = (ovrAppThread*)((size_t)handle);
+	ovrMessage message;
+	ovrMessage_Init(&message, MESSAGE_ON_STOP, MQ_WAIT_PROCESSED);
+	ovrMessageQueue_PostMessage(&appThread->MessageQueue, &message);
+}
+
+extern "C" JNIEXPORT void JNICALL Java_com_dotquest_quest_MainActivityJNI_onDestroy(JNIEnv * env, jobject obj, jlong handle) {
+	ALOGV("MainActivityJNI::onDestroy()");
+	ovrAppThread* appThread = (ovrAppThread*)((size_t)handle);
+	ovrMessage message;
+	ovrMessage_Init(&message, MESSAGE_ON_DESTROY, MQ_WAIT_PROCESSED);
+	ovrMessageQueue_PostMessage(&appThread->MessageQueue, &message);
+	ovrMessageQueue_Enable(&appThread->MessageQueue, false);
+	ovrAppThread_Destroy(appThread, env);
+	free(appThread);
+}
+
+/*
+================================================================================
+Surface lifecycle
+================================================================================
+*/
+
+extern "C" JNIEXPORT void JNICALL Java_com_dotquest_quest_MainActivityJNI_onSurfaceCreated(JNIEnv * env, jobject obj, jlong handle, jobject surface) {
+	ALOGV("MainActivityJNI::onSurfaceCreated()");
+	ovrAppThread* appThread = (ovrAppThread*)((size_t)handle);
+	// An app that is relaunched after pressing the home button gets an initial surface with the wrong orientation even though android:screenOrientation="landscape" is set in the
+	// manifest. The choreographer callback will also never be called for this surface because the surface is immediately replaced with a new surface with the correct orientation.
+	ANativeWindow* newNativeWindow = ANativeWindow_fromSurface(env, surface);
+	if (ANativeWindow_getWidth(newNativeWindow) < ANativeWindow_getHeight(newNativeWindow))
+		ALOGE("Surface not in landscape mode!");
+	ALOGV("NativeWindow = ANativeWindow_fromSurface(env, surface)");
+	appThread->NativeWindow = newNativeWindow;
+	ovrMessage message;
+	ovrMessage_Init(&message, MESSAGE_ON_SURFACE_CREATED, MQ_WAIT_PROCESSED);
+	ovrMessage_SetPointerParm(&message, 0, appThread->NativeWindow);
+	ovrMessageQueue_PostMessage(&appThread->MessageQueue, &message);
+}
+
+extern "C" JNIEXPORT void JNICALL Java_com_dotquest_quest_MainActivityJNI_onSurfaceChanged(JNIEnv * env, jobject obj, jlong handle, jobject surface) {
+	ALOGV("MainActivityJNI::onSurfaceChanged()");
+	ovrAppThread* appThread = (ovrAppThread*)((size_t)handle);
+	// An app that is relaunched after pressing the home button gets an initial surface with the wrong orientation even though android:screenOrientation="landscape" is set in the
+	// manifest. The choreographer callback will also never be called for this surface because the surface is immediately replaced with a new surface with the correct orientation.
+	ANativeWindow* newNativeWindow = ANativeWindow_fromSurface(env, surface);
+	if (ANativeWindow_getWidth(newNativeWindow) < ANativeWindow_getHeight(newNativeWindow))
+		ALOGE("Surface not in landscape mode!");
+	if (newNativeWindow != appThread->NativeWindow) {
+		if (appThread->NativeWindow != NULL) {
+			ovrMessage message;
+			ovrMessage_Init(&message, MESSAGE_ON_SURFACE_DESTROYED, MQ_WAIT_PROCESSED);
+			ovrMessageQueue_PostMessage(&appThread->MessageQueue, &message);
+			ALOGV("ANativeWindow_release(NativeWindow)");
+			ANativeWindow_release(appThread->NativeWindow);
+			appThread->NativeWindow = NULL;
 		}
-
-		//initialize_gl4es();
-
-		ovrAppThread* appThread = (ovrAppThread*)malloc(sizeof(ovrAppThread));
-		ovrAppThread_Create(appThread, env, activity, activityClass);
-		ovrMessageQueue_Enable(&appThread->MessageQueue, true);
-		ovrMessage message;
-		ovrMessage_Init(&message, MESSAGE_ON_CREATE, MQ_WAIT_PROCESSED);
-		ovrMessageQueue_PostMessage(&appThread->MessageQueue, &message);
-
-		return (jlong)((size_t)appThread);
-	}
-
-	JNIEXPORT void JNICALL Java_com_dotquest_quest_DotQuestJNI_onStart(JNIEnv* env, jobject obj, jlong handle, jobject obj1) {
-		ALOGV("    DotQuestJNI::onStart()");
-		_shutdownCallbackObj = (jobject)env->NewGlobalRef(obj1);
-		jclass callbackClass = env->GetObjectClass(_shutdownCallbackObj);
-		_android_shutdown = env->GetMethodID(callbackClass, "shutdown", "()V");
-		ovrAppThread* appThread = (ovrAppThread*)((size_t)handle);
-		ovrMessage message;
-		ovrMessage_Init(&message, MESSAGE_ON_START, MQ_WAIT_PROCESSED);
-		ovrMessageQueue_PostMessage(&appThread->MessageQueue, &message);
-	}
-
-	JNIEXPORT void JNICALL Java_com_dotquest_quest_DotQuestJNI_onResume(JNIEnv* env, jobject obj, jlong handle) {
-		ALOGV("    DotQuestJNI::onResume()");
-		ovrAppThread* appThread = (ovrAppThread*)((size_t)handle);
-		ovrMessage message;
-		ovrMessage_Init(&message, MESSAGE_ON_RESUME, MQ_WAIT_PROCESSED);
-		ovrMessageQueue_PostMessage(&appThread->MessageQueue, &message);
-	}
-
-	JNIEXPORT void JNICALL Java_com_dotquest_quest_DotQuestJNI_onPause(JNIEnv* env, jobject obj, jlong handle) {
-		ALOGV("    DotQuestJNI::onPause()");
-		ovrAppThread* appThread = (ovrAppThread*)((size_t)handle);
-		ovrMessage message;
-		ovrMessage_Init(&message, MESSAGE_ON_PAUSE, MQ_WAIT_PROCESSED);
-		ovrMessageQueue_PostMessage(&appThread->MessageQueue, &message);
-	}
-
-	JNIEXPORT void JNICALL Java_com_dotquest_quest_DotQuestJNI_onStop(JNIEnv* env, jobject obj, jlong handle) {
-		ALOGV("    DotQuestJNI::onStop()");
-		ovrAppThread* appThread = (ovrAppThread*)((size_t)handle);
-		ovrMessage message;
-		ovrMessage_Init(&message, MESSAGE_ON_STOP, MQ_WAIT_PROCESSED);
-		ovrMessageQueue_PostMessage(&appThread->MessageQueue, &message);
-	}
-
-	JNIEXPORT void JNICALL Java_com_dotquest_quest_DotQuestJNI_onDestroy(JNIEnv* env, jobject obj, jlong handle) {
-		ALOGV("    DotQuestJNI::onDestroy()");
-		ovrAppThread* appThread = (ovrAppThread*)((size_t)handle);
-		ovrMessage message;
-		ovrMessage_Init(&message, MESSAGE_ON_DESTROY, MQ_WAIT_PROCESSED);
-		ovrMessageQueue_PostMessage(&appThread->MessageQueue, &message);
-		ovrMessageQueue_Enable(&appThread->MessageQueue, false);
-		ovrAppThread_Destroy(appThread, env);
-		free(appThread);
-	}
-
-	/*
-	================================================================================
-	Surface lifecycle
-	================================================================================
-	*/
-
-	JNIEXPORT void JNICALL Java_com_com_dotquest_quest_DotQuestJNI_onSurfaceCreated(JNIEnv* env, jobject obj, jlong handle, jobject surface) {
-		ALOGV("    DotQuestJNI::onSurfaceCreated()");
-
-		ovrAppThread* appThread = (ovrAppThread*)((size_t)handle);
-
-		ANativeWindow* newNativeWindow = ANativeWindow_fromSurface(env, surface);
-		if (ANativeWindow_getWidth(newNativeWindow) < ANativeWindow_getHeight(newNativeWindow)) {
-			// An app that is relaunched after pressing the home button gets an initial surface with
-			// the wrong orientation even though android:screenOrientation="landscape" is set in the
-			// manifest. The choreographer callback will also never be called for this surface because
-			// the surface is immediately replaced with a new surface with the correct orientation.
-			ALOGE("        Surface not in landscape mode!");
-		}
-
-		ALOGV("        NativeWindow = ANativeWindow_fromSurface(env, surface)");
-		appThread->NativeWindow = newNativeWindow;
-		ovrMessage message;
-		ovrMessage_Init(&message, MESSAGE_ON_SURFACE_CREATED, MQ_WAIT_PROCESSED);
-		ovrMessage_SetPointerParm(&message, 0, appThread->NativeWindow);
-		ovrMessageQueue_PostMessage(&appThread->MessageQueue, &message);
-	}
-
-	JNIEXPORT void JNICALL Java_com_dotquest_quest_DotQuestJNI_onSurfaceChanged(JNIEnv* env, jobject obj, jlong handle, jobject surface) {
-		ALOGV("    DotQuestJNI::onSurfaceChanged()");
-		ovrAppThread* appThread = (ovrAppThread*)((size_t)handle);
-
-		ANativeWindow* newNativeWindow = ANativeWindow_fromSurface(env, surface);
-		if (ANativeWindow_getWidth(newNativeWindow) < ANativeWindow_getHeight(newNativeWindow)) {
-			// An app that is relaunched after pressing the home button gets an initial surface with
-			// the wrong orientation even though android:screenOrientation="landscape" is set in the
-			// manifest. The choreographer callback will also never be called for this surface because
-			// the surface is immediately replaced with a new surface with the correct orientation.
-			ALOGE("        Surface not in landscape mode!");
-		}
-
-		if (newNativeWindow != appThread->NativeWindow) {
-			if (appThread->NativeWindow != NULL) {
-				ovrMessage message;
-				ovrMessage_Init(&message, MESSAGE_ON_SURFACE_DESTROYED, MQ_WAIT_PROCESSED);
-				ovrMessageQueue_PostMessage(&appThread->MessageQueue, &message);
-				ALOGV("        ANativeWindow_release(NativeWindow)");
-				ANativeWindow_release(appThread->NativeWindow);
-				appThread->NativeWindow = NULL;
-			}
-			if (newNativeWindow != NULL) {
-				ALOGV("        NativeWindow = ANativeWindow_fromSurface(env, surface)");
-				appThread->NativeWindow = newNativeWindow;
-				ovrMessage message;
-				ovrMessage_Init(&message, MESSAGE_ON_SURFACE_CREATED, MQ_WAIT_PROCESSED);
-				ovrMessage_SetPointerParm(&message, 0, appThread->NativeWindow);
-				ovrMessageQueue_PostMessage(&appThread->MessageQueue, &message);
-			}
-		}
-		else if (newNativeWindow != NULL) {
-			ANativeWindow_release(newNativeWindow);
+		if (newNativeWindow != NULL) {
+			ALOGV("NativeWindow = ANativeWindow_fromSurface(env, surface)");
+			appThread->NativeWindow = newNativeWindow;
+			ovrMessage message;
+			ovrMessage_Init(&message, MESSAGE_ON_SURFACE_CREATED, MQ_WAIT_PROCESSED);
+			ovrMessage_SetPointerParm(&message, 0, appThread->NativeWindow);
+			ovrMessageQueue_PostMessage(&appThread->MessageQueue, &message);
 		}
 	}
+	else if (newNativeWindow != NULL) {
+		ANativeWindow_release(newNativeWindow);
+	}
+}
 
-	JNIEXPORT void JNICALL Java_com_dotquest_quest_DotQuestJNI_onSurfaceDestroyed(JNIEnv* env, jobject obj, jlong handle) {
-		ALOGV("    DotQuestJNI::onSurfaceDestroyed()");
-		ovrAppThread* appThread = (ovrAppThread*)((size_t)handle);
+extern "C" JNIEXPORT void JNICALL Java_com_dotquest_quest_MainActivityJNI_onSurfaceDestroyed(JNIEnv * env, jobject obj, jlong handle) {
+	ALOGV("MainActivityJNI::onSurfaceDestroyed()");
+	ovrAppThread* appThread = (ovrAppThread*)((size_t)handle);
+	ovrMessage message;
+	ovrMessage_Init(&message, MESSAGE_ON_SURFACE_DESTROYED, MQ_WAIT_PROCESSED);
+	ovrMessageQueue_PostMessage(&appThread->MessageQueue, &message);
+	ALOGV("ANativeWindow_release(NativeWindow)");
+	ANativeWindow_release(appThread->NativeWindow);
+	appThread->NativeWindow = NULL;
+}
+
+/*
+================================================================================
+AppThread
+================================================================================
+*/
+
+static ovrAppThread* _appThread = NULL;
+static ovrApp _appState;
+static ovrJava _java;
+static bool _destroyed = false;
+
+void AppProcessMessageQueue() {
+	for (;;) {
 		ovrMessage message;
-		ovrMessage_Init(&message, MESSAGE_ON_SURFACE_DESTROYED, MQ_WAIT_PROCESSED);
-		ovrMessageQueue_PostMessage(&appThread->MessageQueue, &message);
-		ALOGV("        ANativeWindow_release(NativeWindow)");
-		ANativeWindow_release(appThread->NativeWindow);
-		appThread->NativeWindow = NULL;
+		const bool waitForMessages = !_appState.Ovr && !_destroyed;
+		if (!ovrMessageQueue_GetNextMessage(&_appThread->MessageQueue, &message, waitForMessages))
+			return;
+		switch (message.Id) {
+		case MESSAGE_ON_CREATE: break;
+		case MESSAGE_ON_START:
+			if (vr.initialized) break;
+			ALOGV("Initializing DotQuest Engine");
+			if (argc != 0) {} // set command line arguments here
+			else { int argc = 1; char* argv[] = { "quest" }; }
+			vr.initialized = true;
+			break;
+		case MESSAGE_ON_RESUME: _appState.Resumed = true; break;
+		case MESSAGE_ON_PAUSE: _appState.Resumed = false; break;
+		case MESSAGE_ON_STOP: break;
+		case MESSAGE_ON_DESTROY: _appState.NativeWindow = NULL; _destroyed = true; break;
+		case MESSAGE_ON_SURFACE_CREATED: _appState.NativeWindow = (ANativeWindow*)ovrMessage_GetPointerParm(&message, 0); break;
+		case MESSAGE_ON_SURFACE_DESTROYED: _appState.NativeWindow = NULL; break;
+		}
+		ovrApp_HandleVrModeChanges(&_appState);
+	}
+}
+
+void AppIncrementFrameIndex() {
+	// This is the only place the frame index is incremented, right before calling vrapi_GetPredictedDisplayTime().
+	_appState.FrameIndex++;
+	_appState.DisplayTime = vrapi_GetPredictedDisplayTime(_appState.Ovr, _appState.FrameIndex);
+}
+
+void AppShowLoadingIcon() {
+	int frameFlags = 0;
+	frameFlags |= VRAPI_FRAME_FLAG_FLUSH;
+	ovrLayerProjection2 blackLayer = vrapi_DefaultLayerBlackProjection2();
+	blackLayer.Header.Flags |= VRAPI_FRAME_LAYER_FLAG_INHIBIT_SRGB_FRAMEBUFFER;
+	ovrLayerLoadingIcon2 iconLayer = vrapi_DefaultLayerLoadingIcon2();
+	iconLayer.Header.Flags |= VRAPI_FRAME_LAYER_FLAG_INHIBIT_SRGB_FRAMEBUFFER;
+	const ovrLayerHeader2* layers[] = { &blackLayer.Header, &iconLayer.Header };
+	ovrSubmitFrameDescription2 frameDesc = {};
+	frameDesc.Flags = frameFlags;
+	frameDesc.SwapInterval = 1;
+	frameDesc.FrameIndex = _appState.FrameIndex;
+	frameDesc.DisplayTime = _appState.DisplayTime;
+	frameDesc.LayerCount = 2;
+	frameDesc.Layers = layers;
+	vrapi_SubmitFrame2(_appState.Ovr, &frameDesc);
+}
+
+void AppShutdownVR() {
+	ovrRenderer_Destroy(&_appState.Renderer);
+	ovrEgl_DestroyContext(&_appState.Egl);
+	_java.Vm->DetachCurrentThread();
+	vrapi_Shutdown();
+}
+
+int AppMain(int argc, char* argv[]) {
+	for (int i = 0; i < 10000; i++) {
+		ALOGV("APPMAIN: %d", i);
+		usleep(1000);
+	}
+}
+
+void* AppThreadFunction(void* parm) {
+	_appThread = (ovrAppThread*)parm;
+
+	_java.Vm = _appThread->JavaVm;
+	_java.Vm->AttachCurrentThread(&_java.Env, NULL);
+	_java.ActivityObject = _appThread->ActivityObject;
+	jclass cls = _java.Env->GetObjectClass(_java.ActivityObject);
+	// Note that AttachCurrentThread will reset the thread name.
+	prctl(PR_SET_NAME, (long)"OVR::Main", 0, 0, 0);
+
+	vr.initialized = false;
+	vr.screen_dist = NULL;
+
+	const ovrInitParms initParms = vrapi_DefaultInitParms(&_java);
+	int32_t initResult = vrapi_Initialize(&initParms);
+	if (initResult != VRAPI_INITIALIZE_SUCCESS)
+		exit(0); // If intialization failed, vrapi_* function calls will not be available.
+
+	ovrApp_Clear(&_appState);
+	_appState.Java = _java;
+
+	// this app will handle android gamepad events itself.
+	vrapi_SetPropertyInt(&_appState.Java, VRAPI_EAT_NATIVE_GAMEPAD_EVENTS, 0);
+
+	// using a symmetrical render target
+	vr.height = vr.width = (int)(vrapi_GetSystemPropertyInt(&_java, VRAPI_SYS_PROP_SUGGESTED_EYE_TEXTURE_WIDTH) * SS_MULTIPLIER);
+
+	_appState.CpuLevel = CPU_LEVEL;
+	_appState.GpuLevel = GPU_LEVEL;
+	_appState.MainThreadTid = gettid();
+
+	ovrEgl_CreateContext(&_appState.Egl, NULL);
+	EglInitExtensions();
+
+	// first handle any messages in the queue
+	while (!_appState.Ovr)
+		AppProcessMessageQueue();
+
+	ovrRenderer_Create(vr.width, vr.height, &_appState.Renderer, &_java);
+	if (!_appState.Ovr)
+		return NULL;
+
+	// create the scene if not yet created.
+	ovrScene_Create(vr.width, vr.height, &_appState.Scene, &_java);
+
+	chdir("/sdcard/DotQuest");
+
+	// run loading loop until we are initialized
+	while (!_destroyed && !vr.initialized) {
+		AppProcessMessageQueue();
+		AppIncrementFrameIndex();
+		AppShowLoadingIcon();
 	}
 
+	// refresh rates are currently (12/2020) the following 4 : 60.0 / 72.0 / 80.0 / 90.0
+	int numberOfRefreshRates = vrapi_GetSystemPropertyInt(&_java, VRAPI_SYS_PROP_NUM_SUPPORTED_DISPLAY_REFRESH_RATES);
+	float refreshRatesArray[16];
+	if (numberOfRefreshRates > 16) numberOfRefreshRates = 16;
+	vrapi_GetSystemPropertyFloatArray(&_java, VRAPI_SYS_PROP_SUPPORTED_DISPLAY_REFRESH_RATES, &refreshRatesArray[0], numberOfRefreshRates);
+	for (int i = 0; i < numberOfRefreshRates; i++) {
+		ALOGV("Supported refresh rate : %s Hz", refreshRatesArray[i]);
+		if (maximumSupportedFramerate < refreshRatesArray[i])
+			maximumSupportedFramerate = refreshRatesArray[i];
+	}
+	if (maximumSupportedFramerate > 90.0) {
+		ALOGV("Soft limiting to 90.0 Hz");
+		maximumSupportedFramerate = 90.0;
+	}
+
+	// start
+	AppMain(argc, argv);
+
+	// we are done, shutdown cleanly
+	AppShutdownVR();
+	JNI_Shutdown();
+	return NULL;
 }
 
 /*

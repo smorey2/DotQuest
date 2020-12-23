@@ -10,6 +10,7 @@
       <Filter>lib</Filter>
     </ClCompile>
     <ClCompile Include="VrCompositor.cpp" />
+    <ClCompile Include="AppThread.cpp" />
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="VrCompositor.h" />

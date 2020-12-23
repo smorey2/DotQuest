@@ -30,7 +30,7 @@ import static android.system.Os.setenv;
 
 @SuppressLint("SdCardPath")
 public class MainActivity extends Activity implements SurfaceHolder.Callback {
-	protected static final String TAG = "TAG";
+	protected static final String TAG = "TAG1";
 
 	private static final int READ_EXTERNAL_STORAGE_PERMISSION_ID = 1;
 	private static final int WRITE_EXTERNAL_STORAGE_PERMISSION_ID = 2;
@@ -42,8 +42,8 @@ public class MainActivity extends Activity implements SurfaceHolder.Callback {
 	protected static AudioTrack _audioTrack;
 	protected static AudioRecord _audioRecord;
 
-	private int permissionCount = 0;
-	private String commandLineParams;
+	private int _permissionCount = 0;
+	private String _commandLineParams;
 	private SurfaceView _view;
 	private SurfaceHolder _surfaceHolder;
 	private long _nativeHandle;
@@ -77,10 +77,10 @@ public class MainActivity extends Activity implements SurfaceHolder.Callback {
 			//load_asset("/data/data/com.dotquest.quest/app_lib", "x86_64/libgcc_s.so.1", false);
 			//load_asset("/data/data/com.dotquest.quest/app_lib", "x86_64/libstdc++.so.6.0.28", false);
 		} else {
-			Log.v(TAG, "UNKNOWN: [" + arch +"]");
+			Log.v(TAG, "UNKNOWN: [" + arch + "]");
 			System.exit(0);
 		}
-		System.loadLibrary("gnustl_shared");
+		//System.loadLibrary("c++_shared");
 		System.loadLibrary("DotQuest");
 	}
 
@@ -120,61 +120,66 @@ public class MainActivity extends Activity implements SurfaceHolder.Callback {
 			ActivityCompat.requestPermissions(MainActivity.this,
 					new String[] { Manifest.permission.WRITE_EXTERNAL_STORAGE }, WRITE_EXTERNAL_STORAGE_PERMISSION_ID);
 		} else
-			permissionCount++;
+			_permissionCount++;
 		// permission: READ_EXTERNAL_STORAGE
 		if (ContextCompat.checkSelfPermission(this,
 				Manifest.permission.READ_EXTERNAL_STORAGE) != PackageManager.PERMISSION_GRANTED) {
 			ActivityCompat.requestPermissions(MainActivity.this,
 					new String[] { Manifest.permission.READ_EXTERNAL_STORAGE }, READ_EXTERNAL_STORAGE_PERMISSION_ID);
 		} else
-			permissionCount++;
+			_permissionCount++;
 		// permission: READY
-		if (permissionCount == 2)
+		if (_permissionCount == 2)
 			create();
 	}
 
 	// Handles the user accepting the permission.
 	@Override
 	public void onRequestPermissionsResult(int requestCode, String[] permissions, int[] results) {
-		// permission: WRITE_EXTERNAL_STORAGE
+		// permission: READ_EXTERNAL_STORAGE
 		if (requestCode == READ_EXTERNAL_STORAGE_PERMISSION_ID) {
 			if (results.length > 0 && results[0] == PackageManager.PERMISSION_GRANTED)
-				permissionCount++;
-			else
+				_permissionCount++;
+			else {
+				Log.e(TAG, "adb shell pm grant com.dotquest.quest android.permission.READ_EXTERNAL_STORAGE");
 				System.exit(0);
+			}
 		}
-		// permission: READ_EXTERNAL_STORAGE
+		// permission: WRITE_EXTERNAL_STORAGE
 		if (requestCode == WRITE_EXTERNAL_STORAGE_PERMISSION_ID) {
 			if (results.length > 0 && results[0] == PackageManager.PERMISSION_GRANTED)
-				permissionCount++;
-			else
+				_permissionCount++;
+			else {
+				Log.e(TAG, "adb shell pm grant com.dotquest.quest android.permission.WRITE_EXTERNAL_STORAGE");
 				System.exit(0);
+			}
 		}
 		// permission: READY
 		checkPermissionsAndInitialize();
 	}
 
 	public void create() {
+		Log.v(TAG, "MainActivity::create()");
 		// make the directories
-		new File("/sdcard/GameEstate/Main").mkdirs();
+		new File("/sdcard/DotQuest/Main").mkdirs();
 
 		// copy assets
-		copy_asset("/sdcard/GameEstate/Main", "main.cfg", false);
+		copy_asset("/sdcard/DotQuest/Main", "main.cfg", false);
 
 		// read these from a file and pass through
-		commandLineParams = new String("none");
+		_commandLineParams = new String("quest");
 
 		// see if user is trying to use command line params
-		if (new File("/sdcard/GameEstate/commandline.txt").exists()) { // should exist!
+		if (new File("/sdcard/DotQuest/commandline.txt").exists()) { // should exist!
 			BufferedReader br;
 			try {
-				br = new BufferedReader(new FileReader("/sdcard/GameEstate/commandline.txt"));
+				br = new BufferedReader(new FileReader("/sdcard/DotQuest/commandline.txt"));
 				String s;
 				StringBuilder sb = new StringBuilder(0);
 				while ((s = br.readLine()) != null)
 					sb.append(s + " ");
 				br.close();
-				commandLineParams = new String(sb.toString());
+				_commandLineParams = new String(sb.toString());
 			} catch (FileNotFoundException e) {
 				e.printStackTrace();
 			} catch (IOException e) {
@@ -183,12 +188,11 @@ public class MainActivity extends Activity implements SurfaceHolder.Callback {
 		}
 
 		try {
-			setenv("GAMEHOST_LIBDIR", getApplicationInfo().nativeLibraryDir, true);
+			setenv("DOTQUEST_LIBDIR", getApplicationInfo().nativeLibraryDir, true);
 		} catch (Exception e) {
 		}
 
-		_nativeHandle = MainActivityJNI.onCreate(this, commandLineParams);
-		Log.v(TAG, "HANDLE: " + _nativeHandle);
+		_nativeHandle = MainActivityJNI.onCreate(this, _commandLineParams);
 	}
 
 	@Override
@@ -257,7 +261,6 @@ public class MainActivity extends Activity implements SurfaceHolder.Callback {
 			_surfaceHolder = null;
 		}
 	}
-
 
 	// UTILS
 

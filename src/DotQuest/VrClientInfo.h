@@ -3,6 +3,9 @@
 #define VR_CLIENT_INFO_H
 
 typedef struct {
+	bool initialized;
+	int width;
+	int height;
 	float fov;
 	float screen_dist;
 	float playerHeight;

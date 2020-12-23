@@ -99,7 +99,7 @@
       <AdditionalIncludeDirectories>$(SolutionDir)..\lib\dotnet\linux-arm64\native;$(SolutionDir)..\lib\quest;$(SolutionDir)..\lib\gl4es\include;$(MSBuildProjectDirectory)\include;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
     </ClCompile>
     <Link>
-      <LibraryDependencies>m;vrapi;GL;EGL;GLESv3;%(LibraryDependencies)</LibraryDependencies>
+      <LibraryDependencies>m;log;vrapi;GL;EGL;GLESv3;%(LibraryDependencies)</LibraryDependencies>
       <AdditionalLibraryDirectories>$(SolutionDir)..\lib\dotnet\linux-arm64\native;$(SolutionDir)..\lib\quest\arm64-v8a\Debug;$(SolutionDir)GL4ES\obj\local\arm64-v8a;%(AdditionalLibraryDirectories)</AdditionalLibraryDirectories>
     </Link>
   </ItemDefinitionGroup>
@@ -115,6 +115,7 @@
     </Link>
   </ItemDefinitionGroup>
   <ItemGroup>
+    <ClCompile Include="AppThread.cpp" />
     <ClCompile Include="lib\argtable3.cpp" />
     <ClCompile Include="lib\Math.cpp" />
     <ClCompile Include="MainActivity.cpp" />
