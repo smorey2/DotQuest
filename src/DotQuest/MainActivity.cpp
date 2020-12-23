@@ -464,9 +464,9 @@ ovrApp
 typedef struct {
 	ovrJava				Java;
 	ovrEgl				Egl;
-	ANativeWindow* NativeWindow;
+	ANativeWindow*		NativeWindow;
 	bool				Resumed;
-	ovrMobile* Ovr;
+	ovrMobile*			Ovr;
 	ovrScene			Scene;
 	long long			FrameIndex;
 	double 				DisplayTime;
@@ -492,9 +492,7 @@ static void ovrApp_Clear(ovrApp* app) {
 	app->GpuLevel = 3;
 	app->MainThreadTid = 0;
 	app->RenderThreadTid = 0;
-
 	ovrEgl_Clear(&app->Egl);
-
 	ovrScene_Clear(&app->Scene);
 	ovrRenderer_Clear(&app->Renderer);
 }
@@ -502,14 +500,9 @@ static void ovrApp_Clear(ovrApp* app) {
 static void ovrApp_PushBlackFinal(ovrApp* app) {
 	int frameFlags = 0;
 	frameFlags |= VRAPI_FRAME_FLAG_FLUSH | VRAPI_FRAME_FLAG_FINAL;
-
 	ovrLayerProjection2 layer = vrapi_DefaultLayerBlackProjection2();
 	layer.Header.Flags |= VRAPI_FRAME_LAYER_FLAG_INHIBIT_SRGB_FRAMEBUFFER;
-
-	const ovrLayerHeader2* layers[] = {
-		&layer.Header
-	};
-
+	const ovrLayerHeader2* layers[] = { &layer.Header };
 	ovrSubmitFrameDescription2 frameDesc = {};
 	frameDesc.Flags = frameFlags;
 	frameDesc.SwapInterval = 1;
@@ -517,7 +510,6 @@ static void ovrApp_PushBlackFinal(ovrApp* app) {
 	frameDesc.DisplayTime = app->DisplayTime;
 	frameDesc.LayerCount = 1;
 	frameDesc.Layers = layers;
-
 	vrapi_SubmitFrame2(app->Ovr, &frameDesc);
 }
 
