@@ -5,12 +5,9 @@
 #include <jni.h>
 #include <sys/resource.h>
 #include <pthread.h>
-#include <sys/prctl.h>					// for prctl( PR_SET_NAME )
+#include <sys/prctl.h>					// for prctl(PR_SET_NAME)
 
-//#include <EGL/egl.h>
-//#include <EGL/eglext.h>
 #include <GLES3/gl3.h>
-//#include <GLES3/gl3ext.h>
 #include <GLES/gl2ext.h>
 
 #include "VrApi.h"
@@ -25,6 +22,7 @@
 
 // Must use EGLSyncKHR because the VrApi still supports OpenGL ES 2.0
 #define EGL_SYNC
+
 #if defined EGL_SYNC
 // EGL_KHR_reusable_sync
 PFNEGLCREATESYNCKHRPROC			eglCreateSyncKHR;
@@ -61,11 +59,10 @@ static void EglInitExtensions() {
 	eglSignalSyncKHR = (PFNEGLSIGNALSYNCKHRPROC)eglGetProcAddress("eglSignalSyncKHR");
 	eglGetSyncAttribKHR = (PFNEGLGETSYNCATTRIBKHRPROC)eglGetProcAddress("eglGetSyncAttribKHR");
 #endif
-
 	const char* allExtensions = (const char*)glGetString(GL_EXTENSIONS);
-	if (allExtensions != NULL) {
+	if (allExtensions) {
 		glExtensions.multi_view = strstr(allExtensions, "GL_OVR_multiview2") && strstr(allExtensions, "GL_OVR_multiview_multisampled_render_to_texture");
-		glExtensions.EXT_texture_border_clamp = false; //strstr(allExtensions, "GL_EXT_texture_border_clamp") || strstr(allExtensions, "GL_OES_texture_border_clamp");
+		glExtensions.EXT_texture_border_clamp = false; // strstr(allExtensions, "GL_EXT_texture_border_clamp") || strstr(allExtensions, "GL_OES_texture_border_clamp");
 	}
 }
 
@@ -128,18 +125,17 @@ static void ovrEgl_Clear(ovrEgl* egl) {
 }
 
 static void ovrEgl_CreateContext(ovrEgl* egl, const ovrEgl* shareEgl) {
-	if (egl->Display != 0)
+	if (egl->Display)
 		return;
 	egl->Display = eglGetDisplay(EGL_DEFAULT_DISPLAY);
 	ALOGV("eglInitialize(Display, &MajorVersion, &MinorVersion)");
 	eglInitialize(egl->Display, &egl->MajorVersion, &egl->MinorVersion);
-	// Do NOT use eglChooseConfig, because the Android EGL code pushes in multisample
-	// flags in eglChooseConfig if the user has selected the "force 4x MSAA" option in
+	// Do NOT use eglChooseConfig, because the Android EGL code pushes in multisample flags in eglChooseConfig if the user has selected the "force 4x MSAA" option in
 	// settings, and that is completely wasted for our warp target.
 	const int MAX_CONFIGS = 1024;
 	EGLConfig configs[MAX_CONFIGS];
 	EGLint numConfigs = 0;
-	if (eglGetConfigs(egl->Display, configs, MAX_CONFIGS, &numConfigs) == EGL_FALSE) {
+	if (!eglGetConfigs(egl->Display, configs, MAX_CONFIGS, &numConfigs)) {
 		ALOGE("eglGetConfigs() failed: %s", EglErrorString(eglGetError()));
 		return;
 	}
@@ -156,17 +152,13 @@ static void ovrEgl_CreateContext(ovrEgl* egl, const ovrEgl* shareEgl) {
 	egl->Config = 0;
 	for (int i = 0; i < numConfigs; i++) {
 		EGLint value = 0;
-
 		eglGetConfigAttrib(egl->Display, configs[i], EGL_RENDERABLE_TYPE, &value);
 		if ((value & EGL_OPENGL_ES3_BIT_KHR) != EGL_OPENGL_ES3_BIT_KHR)
 			continue;
-
-		// The pbuffer config also needs to be compatible with normal window rendering
-		// so it can share textures with the window context.
+		// The pbuffer config also needs to be compatible with normal window rendering so it can share textures with the window context.
 		eglGetConfigAttrib(egl->Display, configs[i], EGL_SURFACE_TYPE, &value);
 		if ((value & (EGL_WINDOW_BIT | EGL_PBUFFER_BIT)) != (EGL_WINDOW_BIT | EGL_PBUFFER_BIT))
 			continue;
-
 		int	j = 0;
 		for (; configAttribs[j] != EGL_NONE; j += 2) {
 			eglGetConfigAttrib(egl->Display, configs[i], configAttribs[j], &value);
@@ -178,17 +170,14 @@ static void ovrEgl_CreateContext(ovrEgl* egl, const ovrEgl* shareEgl) {
 			break;
 		}
 	}
-	if (egl->Config == 0) {
-		ALOGE("        eglChooseConfig() failed: %s", EglErrorString(eglGetError()));
+	if (!egl->Config) {
+		ALOGE("eglChooseConfig() failed: %s", EglErrorString(eglGetError()));
 		return;
 	}
-	EGLint contextAttribs[] = {
-		EGL_CONTEXT_CLIENT_VERSION, 3,
-		EGL_NONE
-	};
+	EGLint contextAttribs[] = { EGL_CONTEXT_CLIENT_VERSION, 3, EGL_NONE };
 	ALOGV("Context = eglCreateContext(Display, Config, EGL_NO_CONTEXT, contextAttribs)");
-	egl->Context = eglCreateContext(egl->Display, egl->Config, (shareEgl != NULL) ? shareEgl->Context : EGL_NO_CONTEXT, contextAttribs);
-	if (egl->Context == EGL_NO_CONTEXT) {
+	egl->Context = eglCreateContext(egl->Display, egl->Config, shareEgl ? shareEgl->Context : EGL_NO_CONTEXT, contextAttribs);
+	if (!egl->Context) {
 		ALOGE("eglCreateContext() failed: %s", EglErrorString(eglGetError()));
 		return;
 	}
@@ -199,15 +188,15 @@ static void ovrEgl_CreateContext(ovrEgl* egl, const ovrEgl* shareEgl) {
 	};
 	ALOGV("TinySurface = eglCreatePbufferSurface(Display, Config, surfaceAttribs)");
 	egl->TinySurface = eglCreatePbufferSurface(egl->Display, egl->Config, surfaceAttribs);
-	if (egl->TinySurface == EGL_NO_SURFACE) {
-		ALOGE("        eglCreatePbufferSurface() failed: %s", EglErrorString(eglGetError()));
+	if (!egl->TinySurface) {
+		ALOGE("eglCreatePbufferSurface() failed: %s", EglErrorString(eglGetError()));
 		eglDestroyContext(egl->Display, egl->Context);
 		egl->Context = EGL_NO_CONTEXT;
 		return;
 	}
-	ALOGV("        eglMakeCurrent(Display, TinySurface, TinySurface, Context)");
-	if (eglMakeCurrent(egl->Display, egl->TinySurface, egl->TinySurface, egl->Context) == EGL_FALSE) {
-		ALOGE("        eglMakeCurrent() failed: %s", EglErrorString(eglGetError()));
+	ALOGV("eglMakeCurrent(Display, TinySurface, TinySurface, Context)");
+	if (!eglMakeCurrent(egl->Display, egl->TinySurface, egl->TinySurface, egl->Context)) {
+		ALOGE("eglMakeCurrent() failed: %s", EglErrorString(eglGetError()));
 		eglDestroySurface(egl->Display, egl->TinySurface);
 		eglDestroyContext(egl->Display, egl->Context);
 		egl->Context = EGL_NO_CONTEXT;
@@ -216,26 +205,26 @@ static void ovrEgl_CreateContext(ovrEgl* egl, const ovrEgl* shareEgl) {
 }
 
 static void ovrEgl_DestroyContext(ovrEgl* egl) {
-	if (egl->Display != 0) {
-		ALOGE("        eglMakeCurrent(Display, EGL_NO_SURFACE, EGL_NO_SURFACE, EGL_NO_CONTEXT)");
-		if (eglMakeCurrent(egl->Display, EGL_NO_SURFACE, EGL_NO_SURFACE, EGL_NO_CONTEXT) == EGL_FALSE)
-			ALOGE("        eglMakeCurrent() failed: %s", EglErrorString(eglGetError()));
+	if (egl->Display) {
+		ALOGV("eglMakeCurrent(Display, EGL_NO_SURFACE, EGL_NO_SURFACE, EGL_NO_CONTEXT)");
+		if (!eglMakeCurrent(egl->Display, EGL_NO_SURFACE, EGL_NO_SURFACE, EGL_NO_CONTEXT))
+			ALOGE("eglMakeCurrent() failed: %s", EglErrorString(eglGetError()));
 	}
-	if (egl->Context != EGL_NO_CONTEXT) {
-		ALOGE("eglDestroyContext(Display, Context)");
-		if (eglDestroyContext(egl->Display, egl->Context) == EGL_FALSE)
+	if (egl->Context) {
+		ALOGV("eglDestroyContext(Display, Context)");
+		if (!eglDestroyContext(egl->Display, egl->Context))
 			ALOGE("eglDestroyContext() failed: %s", EglErrorString(eglGetError()));
 		egl->Context = EGL_NO_CONTEXT;
 	}
-	if (egl->TinySurface != EGL_NO_SURFACE) {
-		ALOGE("eglDestroySurface( Display, TinySurface )");
-		if (eglDestroySurface(egl->Display, egl->TinySurface) == EGL_FALSE)
+	if (egl->TinySurface) {
+		ALOGV("eglDestroySurface(Display, TinySurface)");
+		if (!eglDestroySurface(egl->Display, egl->TinySurface))
 			ALOGE("eglDestroySurface() failed: %s", EglErrorString(eglGetError()));
 		egl->TinySurface = EGL_NO_SURFACE;
 	}
-	if (egl->Display != 0) {
-		ALOGE("eglTerminate( Display )");
-		if (eglTerminate(egl->Display) == EGL_FALSE)
+	if (egl->Display) {
+		ALOGV("eglTerminate(Display)");
+		if (!eglTerminate(egl->Display))
 			ALOGE("eglTerminate() failed: %s", EglErrorString(eglGetError()));
 		egl->Display = 0;
 	}
@@ -284,12 +273,11 @@ static bool ovrFramebuffer_Create(ovrFramebuffer* frameBuffer, const GLenum colo
 	PFNGLFRAMEBUFFERTEXTURE2DMULTISAMPLEEXTPROC glFramebufferTexture2DMultisampleEXT = (PFNGLFRAMEBUFFERTEXTURE2DMULTISAMPLEEXTPROC)eglGetProcAddress("glFramebufferTexture2DMultisampleEXT");
 
 	for (int i = 0; i < frameBuffer->TextureSwapChainLength; i++) {
-		// Create the color buffer texture.
+		// create the color buffer texture.
 		const GLuint colorTexture = vrapi_GetTextureSwapChainHandle(frameBuffer->ColorTextureSwapChain, i);
 		GLenum colorTextureTarget = GL_TEXTURE_2D;
 		GL(gles_glBindTexture(colorTextureTarget, colorTexture));
-		// Just clamp to edge. However, this requires manually clearing the border
-		// around the layer to clear the edge texels.
+		// clamp to edge, requires manually clearing the border around the layer to clear the edge texels.
 		GL(gles_glTexParameteri(colorTextureTarget, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE));
 		GL(gles_glTexParameteri(colorTextureTarget, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE));
 
@@ -298,13 +286,13 @@ static bool ovrFramebuffer_Create(ovrFramebuffer* frameBuffer, const GLenum colo
 		GL(gles_glBindTexture(colorTextureTarget, 0));
 
 		if (multisamples > 1 && glRenderbufferStorageMultisampleEXT != NULL && glFramebufferTexture2DMultisampleEXT != NULL) {
-			// Create multisampled depth buffer.
+			// create multisampled depth buffer.
 			GL(glGenRenderbuffers(1, &frameBuffer->DepthBuffers[i]));
 			GL(glBindRenderbuffer(GL_RENDERBUFFER, frameBuffer->DepthBuffers[i]));
 			GL(glRenderbufferStorageMultisampleEXT(GL_RENDERBUFFER, multisamples, GL_DEPTH_COMPONENT24, width, height));
 			GL(glBindRenderbuffer(GL_RENDERBUFFER, 0));
 
-			// Create the frame buffer.
+			// create the frame buffer.
 			GL(glGenFramebuffers(1, &frameBuffer->FrameBuffers[i]));
 			GL(glBindFramebuffer(GL_FRAMEBUFFER, frameBuffer->FrameBuffers[i]));
 			GL(glFramebufferTexture2DMultisampleEXT(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, GL_TEXTURE_2D, colorTexture, 0, multisamples));
@@ -317,13 +305,13 @@ static bool ovrFramebuffer_Create(ovrFramebuffer* frameBuffer, const GLenum colo
 			}
 		}
 		else {
-			// Create depth buffer.
+			// create depth buffer.
 			GL(gles_glGenRenderbuffers(1, &frameBuffer->DepthBuffers[i]));
 			GL(gles_glBindRenderbuffer(GL_RENDERBUFFER, frameBuffer->DepthBuffers[i]));
 			GL(gles_glRenderbufferStorage(GL_RENDERBUFFER, GL_DEPTH_COMPONENT24, frameBuffer->Width, frameBuffer->Height));
 			GL(gles_glBindRenderbuffer(GL_RENDERBUFFER, 0));
 
-			// Create the frame buffer.
+			// create the frame buffer.
 			GL(gles_glGenFramebuffers(1, &frameBuffer->FrameBuffers[i]));
 			GL(gles_glBindFramebuffer(GL_DRAW_FRAMEBUFFER, frameBuffer->FrameBuffers[i]));
 			GL(gles_glFramebufferRenderbuffer(GL_DRAW_FRAMEBUFFER, GL_DEPTH_ATTACHMENT, GL_RENDERBUFFER, frameBuffer->DepthBuffers[i]));
@@ -336,7 +324,6 @@ static bool ovrFramebuffer_Create(ovrFramebuffer* frameBuffer, const GLenum colo
 			}
 		}
 	}
-
 	return true;
 }
 
@@ -359,7 +346,7 @@ void GPUWaitSync() {
 	GLsync syncBuff = glFenceSync(GL_SYNC_GPU_COMMANDS_COMPLETE, 0);
 	GLenum status = glClientWaitSync(syncBuff, GL_SYNC_FLUSH_COMMANDS_BIT, 1000 * 1000 * 50); // Wait for a max of 50ms...
 	if (status != GL_CONDITION_SATISFIED)
-		ALOGE("Error on glClientWaitSync: %d\n", status);
+		ALOGE("Error on glClientWaitSync: %d", status);
 	glDeleteSync(syncBuff);
 }
 
@@ -375,9 +362,8 @@ void ovrFramebuffer_SetNone() {
 
 void ovrFramebuffer_Resolve(ovrFramebuffer* frameBuffer) {
 	// Discard the depth buffer, so the tiler won't need to write it back out to memory.
-//	const GLenum depthAttachment[1] = { GL_DEPTH_ATTACHMENT };
-//	glInvalidateFramebuffer( GL_DRAW_FRAMEBUFFER, 1, depthAttachment );
-
+	// const GLenum depthAttachment[1] = { GL_DEPTH_ATTACHMENT };
+	// glInvalidateFramebuffer( GL_DRAW_FRAMEBUFFER, 1, depthAttachment );
 	// Flush this frame worth of commands.
 	glFlush();
 }
@@ -400,7 +386,7 @@ void ovrFramebuffer_ClearEdgeTexels(ovrFramebuffer* frameBuffer) {
 	GL(gles_glViewport(0, 0, frameBuffer->Width, frameBuffer->Height));
 
 	// Explicitly clear the border texels to black because OpenGL-ES does not support GL_CLAMP_TO_BORDER.
-	// Clear to fully opaque black.
+	// clear to fully opaque black.
 	GL(gles_glClearColor(0.0f, 0.0f, 0.0f, 1.0f));
 
 	// bottom
@@ -419,7 +405,6 @@ void ovrFramebuffer_ClearEdgeTexels(ovrFramebuffer* frameBuffer) {
 	GL(gles_glScissor(0, 0, 0, 0));
 	GL(gles_glDisable(GL_SCISSOR_TEST));
 }
-
 
 /*
 ================================================================================
@@ -464,9 +449,9 @@ ovrApp
 typedef struct {
 	ovrJava				Java;
 	ovrEgl				Egl;
-	ANativeWindow*		NativeWindow;
+	ANativeWindow* NativeWindow;
 	bool				Resumed;
-	ovrMobile*			Ovr;
+	ovrMobile* Ovr;
 	ovrScene			Scene;
 	long long			FrameIndex;
 	double 				DisplayTime;
@@ -539,7 +524,7 @@ static void ovrApp_HandleVrModeChanges(ovrApp* app) {
 
 		// Set performance parameters once we have entered VR mode and have a valid ovrMobile.
 		ovrResult result = vrapi_SetDisplayRefreshRate(app->Ovr, maximumSupportedFramerate);
-		if (result == ovrSuccess) ALOGV("Changed refresh rate. %f Hz", maximumSupportedFramerate);
+		if (result == ovrSuccess) ALOGV("Changed refresh rate. %.2f Hz", maximumSupportedFramerate);
 		else ALOGV("Failed to change refresh rate to 90Hz Result = %d", result);
 		vrapi_SetClockLevels(app->Ovr, app->CpuLevel, app->GpuLevel);
 		ALOGV("vrapi_SetClockLevels(%d, %d)", app->CpuLevel, app->GpuLevel);
@@ -760,7 +745,7 @@ Activity lifecycle
 
 jmethodID _android_shutdown;
 static JavaVM* _jVM;
-static jobject _shutdownCallbackObj = 0;
+static jobject _shutdownCallbackObj = NULL;
 
 jint JNI_OnLoad(JavaVM* vm, void* reserved) {
 	ALOGV("JNI_OnLoad");
@@ -776,10 +761,9 @@ jint JNI_OnLoad(JavaVM* vm, void* reserved) {
 void JNI_Shutdown() {
 	ALOGV("JNI_Shutdown");
 	JNIEnv* env;
-	if (_jVM->GetEnv((void**)&env, JNI_VERSION_1_4) < 0) {
+	if (_jVM->GetEnv((void**)&env, JNI_VERSION_1_4) < 0)
 		_jVM->AttachCurrentThread(&env, NULL);
-	}
-	return env->CallVoidMethod(_shutdownCallbackObj, _android_shutdown);
+	env->CallVoidMethod(_shutdownCallbackObj, _android_shutdown);
 }
 
 // global arg_xxx structs
@@ -796,7 +780,7 @@ extern "C" void initialize_gl4es();
 static int ParseCommandLine(char* cmdline, char** argv);
 
 extern "C" JNIEXPORT jlong JNICALL Java_com_dotquest_quest_MainActivityJNI_onCreate(JNIEnv * env, jclass activityClass, jobject activity, jstring commandLineParams) {
-	ALOGV("MainActivityJNI::onCreate()");
+	ALOGV("::jni::onCreate()");
 
 	// the global arg_xxx structs are initialised within the argtable
 	void* argtable[] = {
@@ -841,7 +825,7 @@ extern "C" JNIEXPORT jlong JNICALL Java_com_dotquest_quest_MainActivityJNI_onCre
 }
 
 extern "C" JNIEXPORT void JNICALL Java_com_dotquest_quest_MainActivityJNI_onStart(JNIEnv * env, jobject obj, jlong handle, jobject obj1) {
-	ALOGV("MainActivityJNI::onStart()");
+	ALOGV("::jni::onStart()");
 	_shutdownCallbackObj = (jobject)env->NewGlobalRef(obj1);
 	jclass callbackClass = env->GetObjectClass(_shutdownCallbackObj);
 	_android_shutdown = env->GetMethodID(callbackClass, "shutdown", "()V");
@@ -852,7 +836,7 @@ extern "C" JNIEXPORT void JNICALL Java_com_dotquest_quest_MainActivityJNI_onStar
 }
 
 extern "C" JNIEXPORT void JNICALL Java_com_dotquest_quest_MainActivityJNI_onResume(JNIEnv * env, jobject obj, jlong handle) {
-	ALOGV("MainActivityJNI::onResume()");
+	ALOGV("::jni::onResume()");
 	ovrAppThread* appThread = (ovrAppThread*)((size_t)handle);
 	ovrMessage message;
 	ovrMessage_Init(&message, MESSAGE_ON_RESUME, MQ_WAIT_PROCESSED);
@@ -860,7 +844,7 @@ extern "C" JNIEXPORT void JNICALL Java_com_dotquest_quest_MainActivityJNI_onResu
 }
 
 extern "C" JNIEXPORT void JNICALL Java_com_dotquest_quest_MainActivityJNI_onPause(JNIEnv * env, jobject obj, jlong handle) {
-	ALOGV("MainActivityJNI::onPause()");
+	ALOGV("::jni::onPause()");
 	ovrAppThread* appThread = (ovrAppThread*)((size_t)handle);
 	ovrMessage message;
 	ovrMessage_Init(&message, MESSAGE_ON_PAUSE, MQ_WAIT_PROCESSED);
@@ -868,7 +852,7 @@ extern "C" JNIEXPORT void JNICALL Java_com_dotquest_quest_MainActivityJNI_onPaus
 }
 
 extern "C" JNIEXPORT void JNICALL Java_com_dotquest_quest_MainActivityJNI_onStop(JNIEnv * env, jobject obj, jlong handle) {
-	ALOGV("MainActivityJNI::onStop()");
+	ALOGV("::jni::onStop()");
 	ovrAppThread* appThread = (ovrAppThread*)((size_t)handle);
 	ovrMessage message;
 	ovrMessage_Init(&message, MESSAGE_ON_STOP, MQ_WAIT_PROCESSED);
@@ -876,7 +860,7 @@ extern "C" JNIEXPORT void JNICALL Java_com_dotquest_quest_MainActivityJNI_onStop
 }
 
 extern "C" JNIEXPORT void JNICALL Java_com_dotquest_quest_MainActivityJNI_onDestroy(JNIEnv * env, jobject obj, jlong handle) {
-	ALOGV("MainActivityJNI::onDestroy()");
+	ALOGV("::jni::onDestroy()");
 	ovrAppThread* appThread = (ovrAppThread*)((size_t)handle);
 	ovrMessage message;
 	ovrMessage_Init(&message, MESSAGE_ON_DESTROY, MQ_WAIT_PROCESSED);
@@ -893,7 +877,7 @@ Surface lifecycle
 */
 
 extern "C" JNIEXPORT void JNICALL Java_com_dotquest_quest_MainActivityJNI_onSurfaceCreated(JNIEnv * env, jobject obj, jlong handle, jobject surface) {
-	ALOGV("MainActivityJNI::onSurfaceCreated()");
+	ALOGV("::jni::onSurfaceCreated()");
 	ovrAppThread* appThread = (ovrAppThread*)((size_t)handle);
 	// An app that is relaunched after pressing the home button gets an initial surface with the wrong orientation even though android:screenOrientation="landscape" is set in the
 	// manifest. The choreographer callback will also never be called for this surface because the surface is immediately replaced with a new surface with the correct orientation.
@@ -909,7 +893,7 @@ extern "C" JNIEXPORT void JNICALL Java_com_dotquest_quest_MainActivityJNI_onSurf
 }
 
 extern "C" JNIEXPORT void JNICALL Java_com_dotquest_quest_MainActivityJNI_onSurfaceChanged(JNIEnv * env, jobject obj, jlong handle, jobject surface) {
-	ALOGV("MainActivityJNI::onSurfaceChanged()");
+	ALOGV("::jni::onSurfaceChanged()");
 	ovrAppThread* appThread = (ovrAppThread*)((size_t)handle);
 	// An app that is relaunched after pressing the home button gets an initial surface with the wrong orientation even though android:screenOrientation="landscape" is set in the
 	// manifest. The choreographer callback will also never be called for this surface because the surface is immediately replaced with a new surface with the correct orientation.
@@ -940,7 +924,7 @@ extern "C" JNIEXPORT void JNICALL Java_com_dotquest_quest_MainActivityJNI_onSurf
 }
 
 extern "C" JNIEXPORT void JNICALL Java_com_dotquest_quest_MainActivityJNI_onSurfaceDestroyed(JNIEnv * env, jobject obj, jlong handle) {
-	ALOGV("MainActivityJNI::onSurfaceDestroyed()");
+	ALOGV("::jni::onSurfaceDestroyed()");
 	ovrAppThread* appThread = (ovrAppThread*)((size_t)handle);
 	ovrMessage message;
 	ovrMessage_Init(&message, MESSAGE_ON_SURFACE_DESTROYED, MQ_WAIT_PROCESSED);
@@ -1019,10 +1003,11 @@ void AppShutdownVR() {
 }
 
 int AppMain(int argc, char* argv[]) {
-	for (int i = 0; i < 10000; i++) {
+	for (int i = 0; i < 2; i++) {
 		ALOGV("APPMAIN: %d", i);
-		usleep(1000);
+		usleep(10);
 	}
+	return 0;
 }
 
 void* AppThreadFunction(void* parm) {
@@ -1085,7 +1070,7 @@ void* AppThreadFunction(void* parm) {
 	if (numberOfRefreshRates > 16) numberOfRefreshRates = 16;
 	vrapi_GetSystemPropertyFloatArray(&_java, VRAPI_SYS_PROP_SUPPORTED_DISPLAY_REFRESH_RATES, &refreshRatesArray[0], numberOfRefreshRates);
 	for (int i = 0; i < numberOfRefreshRates; i++) {
-		ALOGV("Supported refresh rate : %s Hz", refreshRatesArray[i]);
+		ALOGV("Supported refresh rate : %.2f Hz", refreshRatesArray[i]);
 		if (maximumSupportedFramerate < refreshRatesArray[i])
 			maximumSupportedFramerate = refreshRatesArray[i];
 	}

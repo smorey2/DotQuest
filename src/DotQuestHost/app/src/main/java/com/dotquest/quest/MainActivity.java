@@ -57,16 +57,20 @@ public class MainActivity extends Activity implements SurfaceHolder.Callback {
 		_nativeHandle = 0;
 	}
 
+	static {
+		System.loadLibrary("DotQuest");
+	}
+
 	public void shutdown() {
+		Log.v(TAG, "::shutdown()");
 		System.exit(0);
 	}
 
+	/*
 	private void load() {
 		if (LOADED)
 			return;
 		LOADED = true;
-		PrintFolder("/data/data/com.dotquest.quest", true);
-		Log.v(TAG, "----------------------------------------------------------------");
 		String arch = System.getProperty("os.arch");
 		if (arch.equals("aarch64")) {
 			//load_asset("/data/data/com.dotquest.quest/app_lib", "aarch64/ld-musl-aarch64.so.1", false);
@@ -83,12 +87,14 @@ public class MainActivity extends Activity implements SurfaceHolder.Callback {
 		//System.loadLibrary("c++_shared");
 		System.loadLibrary("DotQuest");
 	}
+	*/
 
 	@Override
 	protected void onCreate(Bundle savedInstanceState) {
-		load();
+		//load();
+		PrintFolder("/data/data/com.dotquest.quest", true);
 		Log.v(TAG, "----------------------------------------------------------------");
-		Log.v(TAG, "MainActivity::onCreate()");
+		Log.v(TAG, "::onCreate()");
 		super.onCreate(savedInstanceState);
 
 		initialize();
@@ -159,7 +165,7 @@ public class MainActivity extends Activity implements SurfaceHolder.Callback {
 	}
 
 	public void create() {
-		Log.v(TAG, "MainActivity::create()");
+		Log.v(TAG, "::create()");
 		// make the directories
 		new File("/sdcard/DotQuest/Main").mkdirs();
 
@@ -197,35 +203,35 @@ public class MainActivity extends Activity implements SurfaceHolder.Callback {
 
 	@Override
 	protected void onStart() {
-		Log.v(TAG, "MainActivity::onStart()");
+		Log.v(TAG, "::onStart()");
 		super.onStart();
 		MainActivityJNI.onStart(_nativeHandle, this);
 	}
 
 	@Override
 	protected void onResume() {
-		Log.v(TAG, "MainActivity::onResume()");
+		Log.v(TAG, "::onResume()");
 		super.onResume();
 		MainActivityJNI.onResume(_nativeHandle);
 	}
 
 	@Override
 	protected void onPause() {
-		Log.v(TAG, "MainActivity::onPause()");
+		Log.v(TAG, "::onPause()");
 		MainActivityJNI.onPause(_nativeHandle);
 		super.onPause();
 	}
 
 	@Override
 	protected void onStop() {
-		Log.v(TAG, "MainActivity::onStop()");
+		Log.v(TAG, "::onStop()");
 		MainActivityJNI.onStop(_nativeHandle);
 		super.onStop();
 	}
 
 	@Override
 	protected void onDestroy() {
-		Log.v(TAG, "MainActivity::onDestroy()");
+		Log.v(TAG, "::onDestroy()");
 		if (_surfaceHolder != null) {
 			MainActivityJNI.onSurfaceDestroyed(_nativeHandle);
 		}
@@ -237,7 +243,7 @@ public class MainActivity extends Activity implements SurfaceHolder.Callback {
 
 	@Override
 	public void surfaceCreated(SurfaceHolder holder) {
-		Log.v(TAG, "MainActivity::surfaceCreated()");
+		Log.v(TAG, "::surfaceCreated()");
 		if (_nativeHandle != 0) {
 			MainActivityJNI.onSurfaceCreated(_nativeHandle, holder.getSurface());
 			_surfaceHolder = holder;
@@ -246,7 +252,7 @@ public class MainActivity extends Activity implements SurfaceHolder.Callback {
 
 	@Override
 	public void surfaceChanged(SurfaceHolder holder, int format, int width, int height) {
-		Log.v(TAG, "MainActivity::surfaceChanged()");
+		Log.v(TAG, "::surfaceChanged()");
 		if (_nativeHandle != 0) {
 			MainActivityJNI.onSurfaceChanged(_nativeHandle, holder.getSurface());
 			_surfaceHolder = holder;
@@ -255,7 +261,7 @@ public class MainActivity extends Activity implements SurfaceHolder.Callback {
 
 	@Override
 	public void surfaceDestroyed(SurfaceHolder holder) {
-		Log.v(TAG, "MainActivity::surfaceDestroyed()");
+		Log.v(TAG, "::surfaceDestroyed()");
 		if (_nativeHandle != 0) {
 			MainActivityJNI.onSurfaceDestroyed(_nativeHandle);
 			_surfaceHolder = null;
